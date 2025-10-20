@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dimension Converter</title>
+  <style>
+    :root{
+      --bg:#f7f8fa;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#64748b;
+      --border:#e5e7eb;
+      --accent:#2563eb;
+      --imp:#1e3a8a;   /* Imperial accent (muted navy) */
+      --met:#0f766e;   /* Metric accent (muted teal)  */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background:var(--bg);
+      line-height:1.5;
+    }
+    .container{max-width:1000px;margin:0 auto;padding:24px}
+    header{margin-bottom:18px}
+    h1{font-size:1.6rem;margin:0 0 4px}
+    .sub{color:var(--muted);font-size:.95rem}
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px,1fr));
+      gap:16px;
+      align-items:start;
+    }
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:18px;
+      box-shadow:0 1px 2px rgba(0,0,0,.03);
+    }
+    .section-title{
+      font-size:1.05rem;
+      font-weight:600;
+      margin:2px 0 12px;
+    }
+
+    fieldset{
+      border:1px solid var(--border);
+      border-left-width:4px;
+      border-radius:8px;
+      padding:14px 14px 8px;
+      margin:0 0 14px;
+      background:#fff;
+    }
+    fieldset[data-theme="imp"]{ border-left-color:var(--imp); }
+    fieldset[data-theme="met"]{ border-left-color:var(--met); }
+
+    legend{
+      color:var(--muted);
+      font-size:.85rem;
+      font-weight:700;
+      padding:0 6px;
+    }
+    .legend-chip{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      background:#f1f5f9;
+      border:1px solid var(--border);
+    }
+    fieldset[data-theme="imp"] .legend-chip{ border-color:rgba(30,58,138,.2); color:#1f2a60; }
+    fieldset[data-theme="met"] .legend-chip{ border-color:rgba(15,118,110,.2); color:#105d57; }
+
+    .group{display:grid;grid-template-columns:1fr;gap:10px}
+    label{font-size:.9rem;font-weight:700;color:#1f2937;display:block;margin-bottom:6px}
+    .unit-paren{color:var(--muted);font-weight:700;margin-right:6px}
+
+    .input-wrap{position:relative}
+    input[type="number"]{
+      width:100%;
+      padding:10px 12px;
+      border:1px solid var(--border);
+      border-radius:8px;
+      font-size:1rem;
+      outline:none;
+      background:#fff;
+    }
+    input[type="number"]:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(37,99,235,.15);
+    }
+
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .btn{
+      appearance:none; cursor:pointer;
+      border:1px solid var(--border);
+      background:#fff;
+      padding:9px 12px;
+      border-radius:8px;
+      font-weight:700;
+    }
+    .btn:hover{background:#f9fafb;border-color:#cbd5e1}
+
+    .info{margin-top:12px;color:var(--muted);font-size:.9rem}
+    .updated{background:#e8f0fe;transition:background .4s ease}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Dimension Converter</h1>
+      <div class="sub">Enter a value in any field; the rest update automatically.</div>
+    </header>
+
+    <div class="grid">
+      <!-- LENGTH -->
+      <section class="card" aria-labelledby="len-title">
+        <h2 id="len-title" class="section-title">Length</h2>
+
+        <fieldset data-theme="imp">
+          <legend><span class="legend-chip">Imperial</span></legend>
+          <div class="group">
+            <div>
+              <label for="inches"><span class="unit-paren">(in)</span>Inches</label>
+              <div class="input-wrap">
+                <input id="inches" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+            <div>
+              <label for="feet"><span class="unit-paren">(ft)</span>Feet</label>
+              <div class="input-wrap">
+                <input id="feet" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset data-theme="met">
+          <legend><span class="legend-chip">Metric</span></legend>
+          <div class="group">
+            <div>
+              <label for="millimeters"><span class="unit-paren">(mm)</span>Millimeters</label>
+              <div class="input-wrap">
+                <input id="millimeters" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+            <div>
+              <label for="centimeters"><span class="unit-paren">(cm)</span>Centimeters</label>
+              <div class="input-wrap">
+                <input id="centimeters" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+            <div>
+              <label for="meters"><span class="unit-paren">(m)</span>Meters</label>
+              <div class="input-wrap">
+                <input id="meters" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button class="btn" type="button" onclick="clearGroup(['inches','feet','millimeters','centimeters','meters'])">Clear Length</button>
+        </div>
+        <div class="info">Base unit: inches.</div>
+      </section>
+
+      <!-- MASS -->
+      <section class="card" aria-labelledby="mass-title">
+        <h2 id="mass-title" class="section-title">Mass & Weight</h2>
+
+        <fieldset data-theme="imp">
+          <legend><span class="legend-chip">Imperial</span></legend>
+          <div class="group">
+            <div>
+              <label for="pounds"><span class="unit-paren">(lb)</span>Pounds</label>
+              <div class="input-wrap">
+                <input id="pounds" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+            <div>
+              <label for="ounces"><span class="unit-paren">(oz)</span>Ounces</label>
+              <div class="input-wrap">
+                <input id="ounces" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset data-theme="met">
+          <legend><span class="legend-chip">Metric</span></legend>
+          <div class="group">
+            <div>
+              <label for="kilograms"><span class="unit-paren">(kg)</span>Kilograms</label>
+              <div class="input-wrap">
+                <input id="kilograms" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+            <div>
+              <label for="grams"><span class="unit-paren">(g)</span>Grams</label>
+              <div class="input-wrap">
+                <input id="grams" type="number" step="any" inputmode="decimal" autocomplete="off" />
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="actions">
+          <button class="btn" type="button" onclick="clearGroup(['pounds','ounces','kilograms','grams'])">Clear Mass</button>
+        </div>
+        <div class="info">Base unit: pounds.</div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // --- Utilities ---
+    const PRECISION = 6;
+    let isUpdating = false;
+
+    const trimZeros = n => {
+      const s = Number.isFinite(n) ? n.toFixed(PRECISION) : "";
+      return s.replace(/\.?0+$/,"");
+    };
+    const flash = el => {
+      el.classList.add('updated');
+      setTimeout(()=>el.classList.remove('updated'), 250);
+    };
+    const clearGroup = ids => ids.forEach(id => document.getElementById(id).value = "");
+
+    // --- Length (base: inches) ---
+    const L_toIn = {
+      inches: v => v,
+      feet: v => v * 12,
+      millimeters: v => v / 25.4,
+      centimeters: v => v / 2.54,
+      meters: v => v / 0.0254
+    };
+    const L_fromIn = {
+      inches: v => v,
+      feet: v => v / 12,
+      millimeters: v => v * 25.4,
+      centimeters: v => v * 2.54,
+      meters: v => v * 0.0254
+    };
+    const L_IDS = ['inches','feet','millimeters','centimeters','meters'];
+
+    function convertLength(value, fromUnit){
+      if (isUpdating || value === '') return;
+      isUpdating = true;
+      const inches = L_toIn[fromUnit](parseFloat(value));
+      L_IDS.forEach(u => {
+        if (u === fromUnit) return;
+        const el = document.getElementById(u);
+        const out = L_fromIn[u](inches);
+        el.value = inches === 0 ? '' : trimZeros(out);
+        flash(el);
+      });
+      isUpdating = false;
+    }
+
+    // --- Mass (base: pounds) ---
+    const M_toLb = {
+      pounds: v => v,
+      ounces: v => v / 16,
+      kilograms: v => v * 2.20462,
+      grams: v => v * 0.00220462
+    };
+    const M_fromLb = {
+      pounds: v => v,
+      ounces: v => v * 16,
+      kilograms: v => v / 2.20462,
+      grams: v => v / 0.00220462
+    };
+    const M_IDS = ['pounds','ounces','kilograms','grams'];
+
+    function convertMass(value, fromUnit){
+      if (isUpdating || value === '') return;
+      isUpdating = true;
+      const pounds = M_toLb[fromUnit](parseFloat(value));
+      M_IDS.forEach(u => {
+        if (u === fromUnit) return;
+        const el = document.getElementById(u);
+        const out = M_fromLb[u](pounds);
+        el.value = pounds === 0 ? '' : trimZeros(out);
+        flash(el);
+      });
+      isUpdating = false;
+    }
+
+    // --- Wire up events ---
+    L_IDS.forEach(unit => {
+      document.getElementById(unit).addEventListener('input', e => {
+        const v = e.target.value;
+        if (v === '') { clearGroup(L_IDS); return; }
+        convertLength(v, unit);
+      });
+    });
+    M_IDS.forEach(unit => {
+      document.getElementById(unit).addEventListener('input', e => {
+        const v = e.target.value;
+        if (v === '') { clearGroup(M_IDS); return; }
+        convertMass(v, unit);
+      });
+    });
+  </script>
+</body>
+</html>
