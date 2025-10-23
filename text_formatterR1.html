@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Text Reflow — Minimal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif;background:#0b1220;color:#e5e7eb}
+header{padding:12px 16px;background:#0f172a;border-bottom:1px solid #1e293b}
+main{display:grid;gap:12px;grid-template-columns:1fr;max-width:1100px;margin:14px auto;padding:0 14px}
+@media(min-width:980px){main{grid-template-columns:1fr 1fr}}
+.card{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:12px}
+h2{font-size:1rem;margin:0 0 8px 0}
+textarea{width:100%;min-height:320px;border:1px solid #1e293b;border-radius:10px;background:#0b1326;color:#e5e7eb;padding:10px;font-family:ui-monospace,Consolas,Menlo,monospace}
+.btn{margin-top:8px;background:#60a5fa;color:#0b1220;border:0;border-radius:8px;padding:8px 10px;cursor:pointer}
+small{color:#94a3b8}
+.copy{position:absolute;top:10px;right:10px}
+.wrap{position:relative}
+</style>
+</head>
+<body>
+<header><div>Text Reflow — Minimal</div><small>Auto-formats as you type. Only breaks at headers, keeps B-36253 intact.</small></header>
+<main>
+  <div class="card">
+    <h2>Input</h2>
+    <textarea id="input" placeholder="Paste your text..."></textarea>
+  </div>
+  <div class="card wrap">
+    <h2>Output</h2>
+    <button class="btn copy" onclick="copyOut()">Copy</button>
+    <textarea id="output" placeholder="Output will appear here..." readonly></textarea>
+  </div>
+</main>
+
+<script>
+const HEADERS = ["Summary:","Issue Description:","Suggestion(s):","Expected Completion Date:","Part Number:"];
+
+function tokenize(raw){
+  raw = raw.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  const lines = raw.split("\n");
+  const tokens = [];
+  for(let line of lines){
+    line = line.replace(/[ \t]+$/,"");
+    if(line.trim()==="") continue;
+    let matched=false;
+    for(const h of HEADERS){
+      if(line.startsWith(h)){
+        const rest=line.slice(h.length).replace(/^[ ]/,"");
+        tokens.push({type:"header",text:h});
+        if(rest.length>0){ tokens.push({type:"content",text:rest}); }
+        matched=true; break;
+      }
+    }
+    if(!matched){ tokens.push({type:"content",text:line}); }
+  }
+  return tokens;
+}
+
+function joinContent(chunks){
+  let out="";
+  for(let i=0;i<chunks.length;i++){
+    const cur=chunks[i], next=chunks[i+1];
+    if(cur.type==="header"){
+      if(out.length && !out.endsWith("\n")) out+="\n";
+      out+=cur.text+"\n";
+      continue;
+    }
+    let curText=cur.text;
+    const prevChar=out.slice(-1);
+    if(next && next.type==="header"){
+      out+=curText.trimEnd();
+      continue;
+    }
+    let nextFirst="";
+    if(next && next.type==="content"){ nextFirst=(next.text||"").trimStart().charAt(0)||""; }
+    if(/[^\s]-$/.test(curText)){
+      const before=curText.slice(0,-1).replace(/[ \t]+$/,"");
+      const soft=/[A-Za-z]$/.test(before) && /^[a-z]/.test(nextFirst);
+      if(soft){ out+=before; }
+      else{ out+=before+"-"; }
+    } else {
+      if(out.length===0 || prevChar==="\n"){ out+=curText.trimStart(); }
+      else { out+=(prevChar===" "?"":" ")+curText.trimStart(); }
+    }
+  }
+  return out;
+}
+
+function formatText(raw){
+  const tokens=tokenize(raw);
+  const PRE_BLANK = new Set(["Issue Description:","Suggestion(s):","Expected Completion Date:","Part Number:"]);
+  let out=""; let buf=[];
+  function flush(){
+    if(!buf.length) return;
+    const joined=joinContent(buf);
+    if(joined.length){
+      if(out.length && !out.endsWith("\n")) out+="\n";
+      out+=joined;
+    }
+    buf=[];
+  }
+  for(const t of tokens){
+    if(t.type==="header"){
+      flush();
+      if(PRE_BLANK.has(t.text)){
+        out=out.replace(/[ \t]+$/,"");
+        if(out.length===0){ /* no pre-blank at top */ }
+        else if(out.endsWith("\n\n")){ /* already ok */ }
+        else if(out.endsWith("\n")){ out+="\n"; }
+        else { out+="\n\n"; }
+      } else {
+        if(out.length && !out.endsWith("\n")) out+="\n";
+      }
+      out+=t.text+"\n";
+    } else {
+      buf.push(t);
+    }
+  }
+  flush();
+  out=out.replace(/\n{3,}/g,"\n\n");
+  return out.trim();
+}
+
+function run(){ document.getElementById("output").value = formatText(document.getElementById("input").value); }
+function copyOut(){ const o=document.getElementById("output"); o.select(); document.execCommand("copy"); }
+document.getElementById("input").addEventListener("input", run);
+document.getElementById("input").addEventListener("paste", () => setTimeout(run, 0));
+</script>
+</body>
+</html>
