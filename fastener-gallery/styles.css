@@ -1,0 +1,206 @@
+:root {
+  color-scheme: light dark;
+  --background: #f5f7fb;
+  --surface: #ffffff;
+  --surface-dark: #1f2933;
+  --text: #1f2933;
+  --text-muted: #52606d;
+  --accent: #2563eb;
+  --shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+  font-family: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}
+
+body.dark {
+  background: linear-gradient(135deg, #0f172a 0%, #1f2937 100%);
+  color: #e2e8f0;
+}
+
+.app {
+  width: min(1100px, 92vw);
+  display: grid;
+  gap: 1.5rem;
+  padding: 2.5rem clamp(1.5rem, 4vw, 3rem);
+  background: var(--surface);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+
+.app__header h1 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 700;
+}
+
+.app__header p {
+  margin-top: 0.75rem;
+  max-width: 52ch;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.app__main {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.panel {
+  background: linear-gradient(145deg, rgba(37, 99, 235, 0.05) 0%,
+      rgba(59, 130, 246, 0.12) 100%);
+  border-radius: 22px;
+  padding: 1.75rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.panel--preview {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 1.4rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.field__label {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.field__input {
+  padding: 0.75rem 1rem;
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.8);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.field__input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
+  transform: translateY(-1px);
+}
+
+.details {
+  margin-top: 1.5rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.details__desc {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--accent);
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.preview__image {
+  background: rgba(15, 23, 42, 0.05);
+  border-radius: 20px;
+  padding: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+}
+
+.preview__image img {
+  max-width: 100%;
+  width: min(320px, 60vw);
+}
+
+.preview__meta {
+  display: grid;
+  gap: 1rem;
+}
+
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.spec-table th,
+.spec-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.spec-table th {
+  background: rgba(37, 99, 235, 0.1);
+  font-weight: 600;
+}
+
+.spec-table tr:last-child td {
+  border-bottom: none;
+}
+
+.code-block {
+  font-family: 'Fira Code', 'Roboto Mono', ui-monospace, SFMono-Regular,
+    SFMono-Regular, 'Segoe UI Mono', 'Liberation Mono', Menlo, monospace;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.app__footer {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 680px) {
+  body {
+    padding: 1.5rem 0;
+  }
+
+  .app {
+    padding: 2rem 1.25rem;
+    border-radius: 20px;
+  }
+
+  .panel {
+    padding: 1.5rem;
+  }
+}
