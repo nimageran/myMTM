@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MTM Inspection Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Industrial Inputs */
+        .input-industrial {
+            transition: all 0.2s;
+            font-variant-numeric: tabular-nums;
+        }
+        .input-industrial:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+        
+        /* Animations */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-in {
+            animation: slideIn 0.2s ease-out forwards;
+        }
+
+        /* Scrollbar for history */
+        .history-scroll::-webkit-scrollbar { width: 6px; }
+        .history-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+        .history-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .history-scroll::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col md:flex-row gap-4 p-4 max-w-7xl mx-auto">
+
+    <!-- LEFT PANEL: The Active Checker -->
+    <div class="flex-1 w-full max-w-lg mx-auto md:mx-0 flex flex-col gap-4">
+        
+        <div class="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden relative">
+            <!-- Header -->
+            <div class="bg-slate-800 text-white px-6 py-4 flex justify-between items-center">
+                <div>
+                    <h1 class="font-bold text-lg tracking-wide">INSPECTION STATION</h1>
+                    <p class="text-slate-400 text-xs font-mono">MTM STANDARD // INCH ONLY</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="toggleHelp()" class="p-2 hover:bg-slate-700 rounded transition-colors text-slate-300 text-xs flex items-center gap-2" title="View Standards">
+                        <i class="fa-solid fa-ruler-combined"></i> STANDARDS
+                    </button>
+                    <button onclick="toggleBatch()" class="p-2 hover:bg-slate-700 rounded transition-colors text-slate-300 text-xs flex items-center gap-2" title="Batch Mode">
+                        <i class="fa-solid fa-table"></i> BATCH
+                    </button>
+                    <button onclick="clearAll(true)" class="p-2 hover:bg-slate-700 rounded transition-colors text-slate-300 text-xs flex items-center gap-2" title="Clear (Esc)">
+                        <i class="fa-solid fa-eraser"></i> CLEAR
+                    </button>
+                </div>
+            </div>
+
+            <!-- Main Inputs -->
+            <div id="single-view" class="p-6 space-y-6">
+                
+                <!-- Target (Nominal) -->
+                <div class="relative group">
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Target (Nominal)</label>
+                        <!-- Lock Toggle -->
+                        <button onclick="toggleLock()" id="lockBtn" class="text-slate-300 hover:text-blue-500 transition-colors text-xs flex items-center gap-1">
+                            <i class="fa-solid fa-lock-open" id="lockIcon"></i> <span id="lockText">Unlock</span>
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <input type="text" id="nominalInput" placeholder="15.00" 
+                            class="input-industrial w-full text-4xl font-mono font-bold text-slate-800 border-2 border-slate-200 rounded-lg p-4 text-center bg-slate-50 placeholder-slate-300" 
+                            autocomplete="off" oninput="handleInput()">
+                        <!-- Tolerance Badge -->
+                        <div id="tolBadge" class="absolute right-4 top-1/2 -translate-y-1/2 hidden">
+                            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded border border-blue-200 font-mono" id="tolText">.XX</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actual (Measured) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Actual (Measured)</label>
+                    <input type="text" id="actualInput" placeholder="Enter measurement..." 
+                        class="input-industrial w-full text-4xl font-mono font-bold text-slate-800 border-2 border-slate-200 rounded-lg p-4 text-center placeholder-slate-300" 
+                        autocomplete="off" oninput="handleInput()" onkeydown="handleKey(event)">
+                </div>
+
+                <!-- Log Button (Visual Action) -->
+                <button onclick="triggerLog()" id="logBtn" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-all active:scale-95 flex justify-center items-center gap-2 hidden">
+                    <i class="fa-solid fa-check"></i> LOG & NEXT (ENTER)
+                </button>
+
+                <!-- Result Card -->
+                <div id="resultBox" class="hidden">
+                    <div id="resultCard" class="bg-slate-50 rounded-xl p-6 border-2 border-slate-200 text-center transition-colors duration-300">
+                        <div class="flex justify-center items-center gap-4 mb-2">
+                            <span id="statusText" class="text-6xl font-black text-slate-300 tracking-tighter">--</span>
+                        </div>
+                        <div class="font-mono text-slate-500 font-bold text-lg" id="diffText">Deviation: --</div>
+
+                        <!-- Visual Gauge -->
+                        <div class="mt-6 relative h-6 bg-slate-200 rounded-full overflow-hidden shadow-inner">
+                            <!-- Safe Zone -->
+                            <div id="safeZone" class="absolute top-0 bottom-0 bg-green-500 opacity-20" style="left: 20%; right: 20%;"></div>
+                            <!-- Limits Lines -->
+                            <div class="absolute top-0 bottom-0 w-px bg-slate-400" style="left: 20%"></div>
+                            <div class="absolute top-0 bottom-0 w-px bg-slate-400" style="left: 80%"></div>
+                            <div class="absolute top-0 bottom-0 w-px bg-slate-400 border-l border-dashed border-slate-400 opacity-50 left-1/2"></div>
+                            
+                            <!-- The Needle -->
+                            <div id="indicator" class="absolute top-0 bottom-0 w-1.5 h-full bg-slate-800 shadow-lg transform -translate-x-1/2 transition-all duration-300 z-10" style="left: 50%;"></div>
+                        </div>
+                        
+                        <div class="flex justify-between text-xs font-mono text-slate-400 mt-2">
+                            <span id="limitLow">-0.000</span>
+                            <span class="text-slate-300">NOMINAL</span>
+                            <span id="limitHigh">+0.000</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch View (Hidden) -->
+            <div id="batch-view" class="hidden p-6 bg-slate-50">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-slate-700">Batch Processing</h3>
+                    <button onclick="toggleBatch()" class="text-blue-600 text-sm hover:underline">Back to Single</button>
+                </div>
+                <textarea id="batchInput" class="w-full h-32 p-3 text-xs border rounded mb-2 font-mono focus:ring-2 ring-blue-500 outline-none" placeholder="Paste Excel Data Here (Nominal [Tab] Actual)"></textarea>
+                <div class="flex gap-2">
+                    <button onclick="runBatch()" class="flex-1 bg-blue-600 text-white py-2 rounded text-sm font-bold shadow hover:bg-blue-700">Process Data</button>
+                    <button onclick="document.getElementById('batchInput').value=''" class="px-4 py-2 bg-slate-200 text-slate-600 rounded text-sm font-bold hover:bg-slate-300">Clear</button>
+                </div>
+                <textarea id="batchOutput" class="w-full h-48 p-3 text-xs border rounded mt-4 font-mono bg-white text-slate-600" readonly placeholder="Results will appear here..."></textarea>
+            </div>
+
+            <!-- HELP MODAL -->
+            <div id="helpModal" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 modal-backdrop">
+                <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200">
+                    <div class="bg-slate-800 text-white px-4 py-3 flex justify-between items-center">
+                        <h3 class="font-bold text-sm uppercase tracking-wide"><i class="fa-solid fa-scale-balanced mr-2"></i>MTM Tolerance Guide</h3>
+                        <button onclick="toggleHelp()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="p-4 text-xs space-y-4 text-slate-600">
+                        
+                        <!-- Standard Table -->
+                        <div>
+                            <h4 class="font-bold text-slate-800 uppercase mb-2 border-b border-slate-200 pb-1">Standard Tolerances</h4>
+                            <div class="bg-slate-50 rounded border border-slate-200 p-2 font-mono">
+                                <table class="w-full text-left">
+                                    <tr class="border-b border-slate-100">
+                                        <td class="py-1 text-slate-400">Fractional</td>
+                                        <td class="py-1 font-bold text-slate-800 text-right">± 1/32"</td>
+                                    </tr>
+                                    <tr class="border-b border-slate-100">
+                                        <td class="py-1 text-slate-400">Decimal .X</td>
+                                        <td class="py-1 font-bold text-slate-800 text-right">± .062"</td>
+                                    </tr>
+                                    <tr class="border-b border-slate-100">
+                                        <td class="py-1 text-slate-400">Decimal .XX</td>
+                                        <td class="py-1 font-bold text-slate-800 text-right">± .031"</td>
+                                    </tr>
+                                    <tr class="border-b border-slate-100">
+                                        <td class="py-1 text-slate-400">Decimal .XXX</td>
+                                        <td class="py-1 font-bold text-slate-800 text-right">± .010"</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-1 text-slate-400 italic">Angular</td>
+                                        <td class="py-1 text-slate-500 text-right italic">± 15'</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-1 text-slate-400 italic">Surface</td>
+                                        <td class="py-1 text-slate-500 text-right italic">125 MAX</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div>
+                            <h4 class="font-bold text-slate-800 uppercase mb-2 border-b border-slate-200 pb-1">How to Use</h4>
+                            <ul class="list-disc list-inside space-y-1">
+                                <li><strong>Auto-Detect:</strong> Enter <code>15.00</code> and the tool automatically applies the <strong>.XX</strong> tolerance.</li>
+                                <li><strong>Lock Target:</strong> Click the <i class="fa-solid fa-lock-open text-blue-500"></i> icon to keep the Nominal value fixed while checking multiple parts.</li>
+                                <li><strong>Shortcuts:</strong> Press <strong>Enter</strong> to log result and clear actual. Press <strong>Esc</strong> to clear all.</li>
+                            </ul>
+                        </div>
+
+                        <button onclick="toggleHelp()" class="w-full mt-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2 rounded transition-colors">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        
+        <!-- Quick Help Footer -->
+        <div class="bg-white rounded-lg p-4 shadow-sm border border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+            <span><i class="fa-solid fa-keyboard mr-2"></i>Shortcuts enabled</span>
+            <div class="space-x-4">
+                <span><strong>Enter:</strong> Log Result</span>
+                <span><strong>Esc:</strong> Clear Form</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL: History Log -->
+    <div class="w-full md:w-80 flex flex-col h-[600px] md:h-auto">
+        <div class="bg-white rounded-xl shadow-lg border border-slate-200 flex flex-col h-full overflow-hidden">
+            <div class="bg-slate-100 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                <h2 class="font-bold text-slate-700 text-sm uppercase"><i class="fa-solid fa-clock-rotate-left mr-2"></i>Session History</h2>
+                <button onclick="clearHistory()" class="text-xs text-red-400 hover:text-red-600 font-semibold">Clear Log</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto history-scroll p-0 relative bg-slate-50" id="historyContainer">
+                <!-- Empty State -->
+                <div id="emptyHistory" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300">
+                    <i class="fa-regular fa-clipboard text-4xl mb-2"></i>
+                    <p class="text-xs">No checks yet</p>
+                </div>
+                
+                <!-- Table -->
+                <table class="w-full text-xs font-mono hidden" id="historyTable">
+                    <thead class="bg-slate-100 text-slate-500 sticky top-0 z-10 shadow-sm">
+                        <tr>
+                            <th class="p-2 text-left">Target</th>
+                            <th class="p-2 text-right">Actual</th>
+                            <th class="p-2 text-center">Dev</th>
+                            <th class="p-2 text-center">Sts</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody" class="divide-y divide-slate-200 bg-white">
+                        <!-- Rows go here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="p-3 border-t border-slate-200 bg-white">
+                <button onclick="copyHistory()" class="w-full py-2 border border-slate-300 rounded text-slate-600 text-xs font-bold hover:bg-slate-50 transition-colors">
+                    <i class="fa-regular fa-copy mr-1"></i> Copy Log to Excel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONSTANTS ---
+        const TOL_1_DEC = 0.062;
+        const TOL_2_DEC = 0.031;
+        const TOL_3_DEC = 0.010;
+        const TOL_FRACT = 1/32;
+
+        let isLocked = false;
+        let currentResult = null;
+
+        // --- INIT ---
+        window.onload = function() {
+            document.getElementById('nominalInput').focus();
+        };
+
+        // --- KEYBOARD HANDLING ---
+        function handleKey(e) {
+            if (e.key === "Enter") {
+                triggerLog();
+            }
+            if (e.key === "Escape") {
+                clearAll(false); // standard clear
+            }
+        }
+
+        // Global Keydown for Esc anywhere
+        document.addEventListener('keydown', function(e) {
+            if(e.key === "Escape") {
+                // Close modal if open, otherwise clear
+                const help = document.getElementById('helpModal');
+                if (!help.classList.contains('hidden')) {
+                    toggleHelp();
+                } else {
+                    clearAll(false);
+                }
+            }
+        });
+
+        function triggerLog() {
+            if (currentResult && currentResult.ready) {
+                addToHistory(currentResult);
+                // Clear Actual only, keep focus on Actual
+                document.getElementById('actualInput').value = '';
+                handleInput(); // recalculate (reset view)
+                // Visual feedback flash
+                const box = document.getElementById('actualInput');
+                box.classList.add('bg-green-50');
+                setTimeout(() => box.classList.remove('bg-green-50'), 100);
+            }
+        }
+
+        // --- UI ACTIONS ---
+        function toggleHelp() {
+            const modal = document.getElementById('helpModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function toggleLock() {
+            isLocked = !isLocked;
+            const btn = document.getElementById('lockBtn');
+            const icon = document.getElementById('lockIcon');
+            const text = document.getElementById('lockText');
+            const input = document.getElementById('nominalInput');
+
+            if (isLocked) {
+                icon.className = "fa-solid fa-lock text-blue-500";
+                text.innerText = "Locked";
+                text.className = "text-blue-500 font-bold";
+                input.classList.add('bg-blue-50');
+            } else {
+                icon.className = "fa-solid fa-lock-open";
+                text.innerText = "Unlock";
+                text.className = "";
+                input.classList.remove('bg-blue-50');
+            }
+        }
+
+        function clearAll(force) {
+            if (!isLocked || force === true && !isLocked) {
+                document.getElementById('nominalInput').value = '';
+            }
+            document.getElementById('actualInput').value = '';
+            handleInput();
+            
+            // Focus logic
+            if (isLocked) {
+                document.getElementById('actualInput').focus();
+            } else {
+                document.getElementById('nominalInput').focus();
+            }
+        }
+
+        function toggleBatch() {
+            const single = document.getElementById('single-view');
+            const batch = document.getElementById('batch-view');
+            single.classList.toggle('hidden');
+            batch.classList.toggle('hidden');
+        }
+
+        // --- MATH LOGIC ---
+        function parseVal(str) {
+            if (!str) return NaN;
+            str = str.trim();
+            if (str.includes('/')) {
+                try {
+                    const parts = str.split(' ');
+                    if (parts.length === 2) return parseFloat(parts[0]) + eval(parts[1]);
+                    return eval(str);
+                } catch (e) { return NaN; }
+            }
+            return parseFloat(str);
+        }
+
+        function countDecimals(str) {
+            if (str.indexOf(".") === -1) return 0; 
+            return str.split(".")[1].length || 0;
+        }
+
+        function calculate(nomStr, actStr) {
+            let nom = parseVal(nomStr);
+            let act = parseVal(actStr);
+            if (isNaN(nom)) return null;
+            
+            // Determine tolerance
+            let tol = 0;
+            let detected = "";
+            let isFract = nomStr.includes('/') || (actStr && actStr.includes('/'));
+
+            if (isFract) {
+                tol = TOL_FRACT;
+                detected = "1/32\"";
+            } else {
+                const dec = countDecimals(nomStr);
+                if (dec <= 1) { tol = TOL_1_DEC; detected = ".X"; }
+                else if (dec === 2) { tol = TOL_2_DEC; detected = ".XX"; }
+                else { tol = TOL_3_DEC; detected = ".XXX"; }
+            }
+
+            // If no actual, just return meta data
+            if (isNaN(act)) return { ready: false, detected, nom, tol, upper: nom+tol, lower: nom-tol };
+
+            let diff = act - nom;
+            let pass = Math.abs(diff) <= tol + 0.000001; // Epsilon for float math
+
+            // Visual scaling (Center 50%, Tol = 30%)
+            let pct = (diff / tol) * 30; 
+            let barPos = 50 + pct;
+
+            return { ready: true, pass, diff, detected, upper: nom+tol, lower: nom-tol, barPos, tol, nom, act, nomStr, actStr };
+        }
+
+        function handleInput() {
+            const nomStr = document.getElementById('nominalInput').value;
+            const actStr = document.getElementById('actualInput').value;
+            const resBox = document.getElementById('resultBox');
+            const badge = document.getElementById('tolBadge');
+            const tolText = document.getElementById('tolText');
+            const logBtn = document.getElementById('logBtn');
+            
+            const res = calculate(nomStr, actStr);
+            currentResult = res;
+
+            // 1. Update Tolerance Badge
+            if (res) {
+                badge.classList.remove('hidden');
+                tolText.innerText = res.detected;
+            } else {
+                badge.classList.add('hidden');
+                resBox.classList.add('hidden');
+                logBtn.classList.add('hidden');
+                return;
+            }
+
+            // 2. Show Results if ready
+            if (res.ready) {
+                resBox.classList.remove('hidden');
+                logBtn.classList.remove('hidden'); // Show Log button when data is ready
+                updateResultCard(res);
+            } else {
+                resBox.classList.add('hidden');
+                logBtn.classList.add('hidden');
+            }
+        }
+
+        function updateResultCard(res) {
+            const card = document.getElementById('resultCard');
+            const status = document.getElementById('statusText');
+            const indicator = document.getElementById('indicator');
+            const diffText = document.getElementById('diffText');
+
+            // Colors
+            if (res.pass) {
+                card.className = "bg-green-50 rounded-xl p-6 border-2 border-green-200 text-center transition-all";
+                status.innerText = "PASS";
+                status.className = "text-6xl font-black text-green-600 tracking-tighter";
+                indicator.className = "absolute top-0 bottom-0 w-2 h-full bg-green-800 shadow-lg transform -translate-x-1/2 transition-all duration-300 z-10 rounded-full";
+            } else {
+                card.className = "bg-red-50 rounded-xl p-6 border-2 border-red-200 text-center transition-all";
+                status.innerText = "FAIL";
+                status.className = "text-6xl font-black text-red-600 tracking-tighter";
+                indicator.className = "absolute top-0 bottom-0 w-2 h-full bg-red-800 shadow-lg transform -translate-x-1/2 transition-all duration-300 z-10 rounded-full";
+            }
+
+            // Text
+            const sign = res.diff > 0 ? "+" : "";
+            diffText.innerText = `Dev: ${sign}${res.diff.toFixed(4)}"`;
+            
+            // Limits
+            document.getElementById('limitLow').innerText = res.lower.toFixed(3);
+            document.getElementById('limitHigh').innerText = res.upper.toFixed(3);
+
+            // Bar Position
+            let finalPos = res.barPos;
+            if (finalPos < 5) finalPos = 5;
+            if (finalPos > 95) finalPos = 95;
+            indicator.style.left = finalPos + "%";
+        }
+
+        // --- HISTORY ---
+        function addToHistory(res) {
+            document.getElementById('emptyHistory').classList.add('hidden');
+            document.getElementById('historyTable').classList.remove('hidden');
+            
+            const tbody = document.getElementById('historyBody');
+            const row = document.createElement('tr');
+            row.className = "animate-slide-in hover:bg-slate-50";
+            
+            const colorClass = res.pass ? "text-green-600 font-bold" : "text-red-600 font-bold";
+            const icon = res.pass ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-xmark"></i>';
+            const sign = res.diff > 0 ? "+" : "";
+
+            row.innerHTML = `
+                <td class="p-2 border-b border-slate-100 text-slate-700">${res.nomStr}</td>
+                <td class="p-2 border-b border-slate-100 text-right font-semibold">${res.actStr}</td>
+                <td class="p-2 border-b border-slate-100 text-center text-slate-400">${sign}${res.diff.toFixed(3)}</td>
+                <td class="p-2 border-b border-slate-100 text-center ${colorClass}">${icon}</td>
+            `;
+            
+            // Insert at top
+            tbody.insertBefore(row, tbody.firstChild);
+        }
+
+        function clearHistory() {
+            document.getElementById('historyBody').innerHTML = '';
+            document.getElementById('emptyHistory').classList.remove('hidden');
+            document.getElementById('historyTable').classList.add('hidden');
+        }
+
+        function copyHistory() {
+            const rows = document.querySelectorAll('#historyBody tr');
+            if (rows.length === 0) return;
+            
+            let txt = "Target\tActual\tDeviation\tResult\n";
+            rows.forEach(r => {
+                const cols = r.querySelectorAll('td');
+                // Extract text, remove icons
+                const target = cols[0].innerText;
+                const actual = cols[1].innerText;
+                const dev = cols[2].innerText;
+                // Check icon class for pass/fail
+                const isPass = cols[3].querySelector('.fa-check') !== null;
+                txt += `${target}\t${actual}\t${dev}\t${isPass ? 'PASS' : 'FAIL'}\n`;
+            });
+            
+            const el = document.createElement('textarea');
+            el.value = txt;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            alert("History copied to clipboard!");
+        }
+
+        // --- BATCH (Legacy Support) ---
+        function runBatch() {
+            const lines = document.getElementById('batchInput').value.split('\n');
+            let out = "Nominal\tActual\tResult\tDeviation\tTol\n";
+            lines.forEach(l => {
+                let p = l.split(/[\t,]+/);
+                if(p.length>=2) {
+                    let r = calculate(p[0], p[1]);
+                    if (r) {
+                        out += `${p[0]}\t${p[1]}\t${r.pass ? "PASS" : "FAIL"}\t${r.diff.toFixed(4)}\t${r.detected}\n`;
+                    } else {
+                        out += `${p[0]}\t${p[1]}\tERR\t--\t--\n`;
+                    }
+                }
+            });
+            document.getElementById('batchOutput').value = out;
+        }
+    </script>
+</body>
+</html>
