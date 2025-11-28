@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Process Route Explorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- XLSX.js for reading Excel in the browser -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      color: #e5e7ff;
+      background: radial-gradient(circle at top, #1d1b3a 0%, #050816 40%, #02010a 100%);
+      overflow-x: hidden;
+    }
+
+    /* Futuristic background blobs */
+    .bg-blob {
+      position: fixed;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      filter: blur(70px);
+      opacity: 0.4;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .bg-blob.blob-1 {
+      top: -120px;
+      left: -80px;
+      background: #7f5af0;
+    }
+
+    .bg-blob.blob-2 {
+      bottom: -160px;
+      right: -100px;
+      background: #2cb67d;
+    }
+
+    .app-shell {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 24px auto 40px;
+      padding: 16px;
+    }
+
+    header {
+      margin-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .app-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-title span.glow-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #2cb67d;
+      box-shadow: 0 0 12px #2cb67d;
+    }
+
+    .app-subtitle {
+      font-size: 0.9rem;
+      color: #9ca3ff;
+      max-width: 640px;
+    }
+
+    .glass-panel {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85));
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 255, 0.25);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.8),
+        0 22px 45px rgba(15, 23, 42, 0.9);
+      padding: 18px 18px 22px;
+      margin-bottom: 16px;
+    }
+
+    .panel-header {
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #a5b4fc;
+      margin-bottom: 10px;
+    }
+
+    .upload-row,
+    .search-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .file-label {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(129, 140, 248, 0.6);
+      cursor: pointer;
+      font-size: 0.9rem;
+      background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.35), rgba(15, 23, 42, 0.98));
+      transition: all 0.16s ease-out;
+      white-space: nowrap;
+    }
+
+    .file-label:hover {
+      border-color: #7f5af0;
+      box-shadow: 0 0 12px rgba(127, 90, 240, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .file-label input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border: 1px solid rgba(148, 163, 255, 0.4);
+      color: #c7d2fe;
+      background: rgba(15, 23, 42, 0.8);
+      min-height: 28px;
+    }
+
+    select,
+    input[type="text"] {
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 255, 0.55);
+      padding: 7px 14px;
+      font-size: 0.9rem;
+      color: #e5e7ff;
+      outline: none;
+      min-width: 140px;
+      max-width: 100%;
+    }
+
+    select:focus,
+    input[type="text"]:focus {
+      box-shadow: 0 0 0 1px #7f5af0, 0 0 12px rgba(127, 90, 240, 0.9);
+      border-color: #7f5af0;
+    }
+
+    button {
+      border-radius: 999px;
+      border: 1px solid rgba(127, 90, 240, 0.8);
+      background: radial-gradient(circle at top left, #7f5af0, #4338ca);
+      color: #f9fafb;
+      padding: 7px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow:
+        0 12px 25px rgba(15, 23, 42, 0.9),
+        0 0 12px rgba(127, 90, 240, 0.7);
+      transition: transform 0.16s ease-out, box-shadow 0.16s ease-out, opacity 0.16s ease-out;
+    }
+
+    button span.icon {
+      font-size: 1rem;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: default;
+      box-shadow: none;
+    }
+
+    button:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow:
+        0 18px 35px rgba(15, 23, 42, 1),
+        0 0 18px rgba(129, 140, 248, 0.8);
+    }
+
+    .status-line {
+      margin-top: 8px;
+      font-size: 0.82rem;
+      color: #9ca3ff;
+    }
+
+    .status-line strong {
+      color: #e5e7ff;
+    }
+
+    .search-row input[type="text"] {
+      flex: 1 1 220px;
+      font-size: 1rem;
+    }
+
+    .search-row button {
+      flex: 0 0 auto;
+    }
+
+    /* Results */
+    #resultPanel {
+      margin-top: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .route-card {
+      border-radius: 18px;
+      padding: 14px 14px 16px;
+      background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.18), rgba(15, 23, 42, 0.98));
+      border: 1px solid rgba(148, 163, 255, 0.45);
+      box-shadow:
+        0 14px 30px rgba(15, 23, 42, 0.95),
+        0 0 18px rgba(37, 99, 235, 0.65);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .route-card::before {
+      content: "";
+      position: absolute;
+      inset: -1px;
+      border-radius: inherit;
+      border: 1px solid transparent;
+      background:
+        linear-gradient(120deg, rgba(56, 189, 248, 0.3), rgba(59, 130, 246, 0.1), rgba(236, 72, 153, 0.3))
+        border-box;
+      mask:
+        linear-gradient(#000 0 0) padding-box,
+        linear-gradient(#000 0 0);
+      mask-composite: exclude;
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    .route-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .route-part {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .route-part span.badge {
+      margin-left: 8px;
+      font-size: 0.7rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(96, 165, 250, 0.7);
+      color: #bfdbfe;
+      text-transform: none;
+    }
+
+    .route-asm {
+      font-size: 0.78rem;
+      color: #a5b4fc;
+      text-align: right;
+      max-width: 55%;
+    }
+
+    .route-meta {
+      margin-top: 4px;
+      font-size: 0.78rem;
+      color: #cbd5ff;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .meta-pill {
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 255, 0.45);
+      background: rgba(15, 23, 42, 0.9);
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .meta-label {
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.09em;
+      color: #a5b4fc;
+    }
+
+    .timeline {
+      margin-top: 10px;
+      border-left: 1px dashed rgba(148, 163, 255, 0.5);
+      padding-left: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .timeline-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .step-index {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(129, 140, 248, 0.8);
+      background: radial-gradient(circle at top, rgba(79, 70, 229, 0.9), rgba(15, 23, 42, 1));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(129, 140, 248, 0.8);
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-text {
+      font-size: 0.85rem;
+      color: #e5e7ff;
+    }
+
+    .no-result {
+      font-size: 0.86rem;
+      color: #fbbf24;
+    }
+
+    @media (max-width: 720px) {
+      .app-shell {
+        padding: 10px;
+        margin-top: 14px;
+      }
+
+      .glass-panel {
+        padding: 14px 12px 16px;
+      }
+
+      .route-card {
+        padding: 12px 10px 14px;
+      }
+
+      .route-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .route-asm {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-blob blob-1"></div>
+  <div class="bg-blob blob-2"></div>
+
+  <div class="app-shell">
+    <header>
+      <div class="app-title">
+        <span class="glow-dot"></span>
+        PROCESS ROUTE EXPLORER
+      </div>
+      <div class="app-subtitle">
+        Upload your MBOM Excel, type a part number, and see a human-readable route:
+        from blanks and processes up to its assembly.
+      </div>
+    </header>
+
+    <!-- Upload / sheet selection -->
+    <div class="glass-panel">
+      <div class="panel-header">1 · Load MBOM</div>
+      <div class="upload-row">
+        <label class="file-label">
+          <span class="icon">📂</span>
+          <span>Choose Excel file (.xlsx)</span>
+          <input id="fileInput" type="file" accept=".xlsx,.xls" />
+        </label>
+
+        <select id="sheetSelect" disabled></select>
+
+        <button id="loadSheetBtn" disabled>
+          <span class="icon">⚙️</span>
+          <span>Parse sheet</span>
+        </button>
+
+        <div id="fileStatus" class="chip">
+          <span class="meta-label">Status</span>
+          <span id="fileStatusText">No file loaded</span>
+        </div>
+      </div>
+      <div id="sheetStatus" class="status-line"></div>
+    </div>
+
+    <!-- Search panel -->
+    <div class="glass-panel">
+      <div class="panel-header">2 · Trace a part</div>
+      <div class="search-row">
+        <input
+          id="partInput"
+          type="text"
+          placeholder="Enter part number, e.g. A-43679"
+          disabled
+        />
+        <button id="searchBtn" disabled>
+          <span class="icon">🔍</span>
+          <span>Trace process</span>
+        </button>
+      </div>
+      <div class="status-line">
+        Tip: this tool expects a sheet with headers like <strong>ASSEMBLY NO</strong>,
+        <strong>Item</strong>, <strong>Part #</strong>, <strong>Category</strong>,
+        <strong>Description</strong>, <strong>Secondary process</strong>,
+        <strong>Part Location/Process</strong>.
+      </div>
+    </div>
+
+    <!-- Results -->
+    <div class="glass-panel">
+      <div class="panel-header">3 · Result</div>
+      <div id="resultPanel"></div>
+    </div>
+  </div>
+
+  <script>
+    // ===== Internal data structures =====
+    let workbook = null;
+    let nodes = [];                // all rows as Node objects
+    let rowsByPart = {};           // partKey (upper) -> [Node]
+    let nodeIndex = {};            // assemblyNo|item -> Node
+
+    const fileInput = document.getElementById("fileInput");
+    const sheetSelect = document.getElementById("sheetSelect");
+    const loadSheetBtn = document.getElementById("loadSheetBtn");
+    const fileStatusText = document.getElementById("fileStatusText");
+    const sheetStatus = document.getElementById("sheetStatus");
+    const partInput = document.getElementById("partInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const resultPanel = document.getElementById("resultPanel");
+
+    // ===== Helpers =====
+    function friendlyCategory(cat) {
+      if (!cat) return "unspecified type";
+      const c = String(cat).toUpperCase();
+      const map = {
+        RAW: "raw material",
+        LASER: "laser-cut blank",
+        WJET: "waterjet-cut blank",
+        MACH: "machined part",
+        WELD: "welded fabrication",
+        ASSM: "assembly",
+        FASTN: "fastener",
+        PURCH: "purchased part",
+        PTRAIN: "power-train item"
+      };
+      return map[c] || c;
+    }
+
+    function parentItemCode(item) {
+      if (!item) return null;
+      const s = String(item);
+      if (!s.includes(".")) return null;
+      const parts = s.split(".");
+      parts.pop();
+      return parts.join(".");
+    }
+
+    function findInputsForNode(node) {
+      if (!node.item || !node.assemblyNo) return [];
+      const prefix = node.item + ".";
+      const acc = [];
+      for (const n of nodes) {
+        if (!n.item || !n.assemblyNo) continue;
+        if (n.assemblyNo !== node.assemblyNo) continue;
+        if (!String(n.item).startsWith(prefix)) continue;
+        if (n.part === node.part && n.item === node.item) continue;
+        // treat these as "process inputs" (can tune this list later)
+        const cat = (n.category || "").toUpperCase();
+        if (["RAW", "LASER", "WJET", "MACH", "WELD", "PTRAIN", "FASTN", "PURCH", "CAST"].includes(cat)) {
+          acc.push(n);
+        }
+      }
+      return acc;
+    }
+
+    function buildChain(node) {
+      const chain = {
+        self: node,
+        inputs: findInputsForNode(node),
+        parents: [],
+        topAssemblyNo: node.assemblyNo || null,
+        topAssemblyDesc: node.assemblyDescription || null
+      };
+
+      // Climb up via Item codes inside the same assembly
+      let current = node;
+      while (current && current.item && current.assemblyNo) {
+        const parentItem = parentItemCode(current.item);
+        if (!parentItem) break;
+        const key = current.assemblyNo + "|" + parentItem;
+        const parentNode = nodeIndex[key];
+        if (!parentNode) break;
+        chain.parents.push(parentNode);
+        current = parentNode;
+      }
+      return chain;
+    }
+
+    function summarizeChain(chain) {
+      const n = chain.self;
+      const inputs = chain.inputs || [];
+      const parents = chain.parents || [];
+      const asmNo = chain.topAssemblyNo;
+      const asmDesc = chain.topAssemblyDesc;
+
+      const sentences = [];
+
+      // Main sentence
+      let base = `Part ${n.part} is a ${friendlyCategory(n.category)}`;
+      if (n.description) {
+        base += ` (${n.description})`;
+      }
+      if (n.location) {
+        base += ` located at ${n.location}`;
+      }
+      if (n.secondaryProcess) {
+        base += ` with secondary process: ${n.secondaryProcess}`;
+      }
+      base += ".";
+      sentences.push(base);
+
+      // Inputs / blanks
+      if (inputs.length) {
+        const parts = inputs.map(inp => {
+          let t = `${inp.part} (${friendlyCategory(inp.category)}`;
+          if (inp.description) {
+            t += ` – ${inp.description}`;
+          }
+          t += ")";
+          return t;
+        });
+        sentences.push("It is built from: " + parts.join(", ") + ".");
+      }
+
+      // Parents in the tree (subassemblies)
+      for (const p of parents) {
+        let line = `Then it is used inside part ${p.part || "(no part #)"}`;
+        line += ` (${friendlyCategory(p.category)}`;
+        if (p.description) {
+          line += ` – ${p.description}`;
+        }
+        line += ").";
+        sentences.push(line);
+      }
+
+      // Main assembly
+      if (asmNo) {
+        let tail = `All of this is under main assembly ${asmNo}`;
+        if (asmDesc) {
+          tail += ` – ${asmDesc}`;
+        }
+        tail += ".";
+        sentences.push(tail);
+      }
+
+      return sentences;
+    }
+
+    function clearResults() {
+      resultPanel.innerHTML = "";
+    }
+
+    function renderNoResult(message) {
+      clearResults();
+      const p = document.createElement("div");
+      p.className = "no-result";
+      p.textContent = message;
+      resultPanel.appendChild(p);
+    }
+
+    function renderChains(partKey, chains) {
+      clearResults();
+
+      chains.forEach((chain, idx) => {
+        const node = chain.self;
+        const sentences = summarizeChain(chain);
+
+        const card = document.createElement("div");
+        card.className = "route-card";
+
+        const header = document.createElement("div");
+        header.className = "route-header";
+
+        const title = document.createElement("div");
+        title.className = "route-part";
+        title.textContent = node.part || "(no part #)";
+
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = `Occurrence ${idx + 1}`;
+        title.appendChild(badge);
+
+        const asm = document.createElement("div");
+        asm.className = "route-asm";
+        if (node.assemblyNo) {
+          let t = node.assemblyNo;
+          if (node.assemblyDescription) {
+            t += " — " + node.assemblyDescription;
+          }
+          asm.textContent = t;
+        } else {
+          asm.textContent = "No main assembly detected";
+        }
+
+        header.appendChild(title);
+        header.appendChild(asm);
+        card.appendChild(header);
+
+        // Meta pills row
+        const metaRow = document.createElement("div");
+        metaRow.className = "route-meta";
+
+        const catPill = document.createElement("div");
+        catPill.className = "meta-pill";
+        catPill.innerHTML = `<span class="meta-label">Category</span><span>${friendlyCategory(node.category)}</span>`;
+        metaRow.appendChild(catPill);
+
+        if (node.location) {
+          const locPill = document.createElement("div");
+          locPill.className = "meta-pill";
+          locPill.innerHTML = `<span class="meta-label">Location</span><span>${node.location}</span>`;
+          metaRow.appendChild(locPill);
+        }
+
+        if (node.secondaryProcess) {
+          const secPill = document.createElement("div");
+          secPill.className = "meta-pill";
+          secPill.innerHTML = `<span class="meta-label">Secondary</span><span>${node.secondaryProcess}</span>`;
+          metaRow.appendChild(secPill);
+        }
+
+        if (node.group != null && node.group !== "") {
+          const groupPill = document.createElement("div");
+          groupPill.className = "meta-pill";
+          groupPill.innerHTML = `<span class="meta-label">Group</span><span>${node.group}</span>`;
+          metaRow.appendChild(groupPill);
+        }
+
+        card.appendChild(metaRow);
+
+        // Timeline
+        const timeline = document.createElement("div");
+        timeline.className = "timeline";
+
+        sentences.forEach((sentence, idx2) => {
+          const trimmed = sentence.trim();
+          if (!trimmed) return;
+
+          const step = document.createElement("div");
+          step.className = "timeline-step";
+
+          const idxDot = document.createElement("div");
+          idxDot.className = "step-index";
+          idxDot.textContent = idx2 + 1;
+
+          const text = document.createElement("div");
+          text.className = "step-text";
+          text.textContent = trimmed;
+
+          step.appendChild(idxDot);
+          step.appendChild(text);
+          timeline.appendChild(step);
+        });
+
+        card.appendChild(timeline);
+        resultPanel.appendChild(card);
+      });
+    }
+
+    // ===== File handling =====
+    fileInput.addEventListener("change", event => {
+      const file = event.target.files[0];
+      clearResults();
+
+      if (!file) {
+        workbook = null;
+        sheetSelect.innerHTML = "";
+        sheetSelect.disabled = true;
+        loadSheetBtn.disabled = true;
+        partInput.disabled = true;
+        searchBtn.disabled = true;
+        fileStatusText.textContent = "No file loaded";
+        sheetStatus.textContent = "";
+        return;
+      }
+
+      fileStatusText.textContent = `Loading: ${file.name}…`;
+      sheetStatus.textContent = "Reading workbook in your browser…";
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const data = new Uint8Array(e.target.result);
+        try {
+          workbook = XLSX.read(data, { type: "array" });
+        } catch (err) {
+          console.error(err);
+          workbook = null;
+          fileStatusText.textContent = "Error reading Excel file";
+          sheetStatus.textContent = "Make sure it's a valid .xlsx.";
+          return;
+        }
+
+        // Populate sheet dropdown
+        sheetSelect.innerHTML = "";
+        workbook.SheetNames.forEach(name => {
+          const opt = document.createElement("option");
+          opt.value = name;
+          opt.textContent = name;
+          sheetSelect.appendChild(opt);
+        });
+
+        // Try to auto-pick a mechanical sheet
+        const mechName = workbook.SheetNames.find(n =>
+          n.toUpperCase().includes("OPMBOM_MECH.3429")
+        ) || workbook.SheetNames[0];
+
+        sheetSelect.value = mechName;
+        sheetSelect.disabled = false;
+        loadSheetBtn.disabled = false;
+        fileStatusText.textContent = `Workbook loaded: ${file.name}`;
+        sheetStatus.textContent = `Select a sheet (default: ${mechName}) and click “Parse sheet”.`;
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // ===== Parse chosen sheet into our Node graph =====
+    loadSheetBtn.addEventListener("click", () => {
+      if (!workbook) return;
+      const sheetName = sheetSelect.value;
+      const ws = workbook.Sheets[sheetName];
+      if (!ws) {
+        sheetStatus.textContent = "Selected sheet not found in workbook.";
+        return;
+      }
+
+      clearResults();
+      sheetStatus.textContent = "Parsing sheet structure…";
+
+      // Read all rows as raw arrays
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+      if (!rows.length) {
+        sheetStatus.textContent = "Sheet is empty.";
+        return;
+      }
+
+      // Find header row (look for "Part #" + "Category")
+      let headerIndex = -1;
+      for (let i = 0; i < Math.min(10, rows.length); i++) {
+        const row = rows[i] || [];
+        if (row.includes("Part #") && row.includes("Category") && row.includes("ASSEMBLY NO")) {
+          headerIndex = i;
+          break;
+        }
+      }
+      if (headerIndex === -1) {
+        sheetStatus.textContent = "Could not find header row (no Part # / Category / ASSEMBLY NO).";
+        return;
+      }
+
+      const header = rows[headerIndex];
+      const colIndex = {};
+      header.forEach((name, idx) => {
+        if (name) colIndex[name] = idx;
+      });
+
+      function idx(name) {
+        return colIndex.hasOwnProperty(name) ? colIndex[name] : -1;
+      }
+
+      const idxAsm = idx("ASSEMBLY NO");
+      const idxItem = idx("Item");
+      const idxPart = idx("Part #");
+      const idxCat = idx("Category");
+      const idxDesc = idx("Description");
+      const idxGroup = idx("Group");
+      const idxSec = idx("Secondary process");
+      const idxLoc = idx("Part Location/Process");
+
+      if (idxAsm === -1 || idxItem === -1 || idxPart === -1 || idxCat === -1 || idxDesc === -1) {
+        sheetStatus.textContent = "Header row missing one of the required columns.";
+        return;
+      }
+
+      nodes = [];
+      rowsByPart = {};
+      nodeIndex = {};
+
+      let currentAssembly = null;
+      let currentAsmDesc = null;
+      let currentGroup = null;
+
+      for (let r = headerIndex + 1; r < rows.length; r++) {
+        const row = rows[r] || [];
+        const asmVal = row[idxAsm];
+        if (asmVal) {
+          currentAssembly = String(asmVal).trim();
+          const descVal = row[idxDesc];
+          currentAsmDesc = descVal ? String(descVal).trim() : null;
+          const gVal = row[idxGroup];
+          if (gVal !== null && gVal !== undefined && gVal !== "") {
+            currentGroup = gVal;
+          }
+        }
+
+        const partVal = row[idxPart];
+        const catVal = row[idxCat];
+        const descVal = row[idxDesc];
+        const itemVal = row[idxItem];
+        const secVal = idxSec !== -1 ? row[idxSec] : null;
+        const locVal = idxLoc !== -1 ? row[idxLoc] : null;
+
+        const node = {
+          assemblyNo: currentAssembly,
+          assemblyDescription: currentAsmDesc,
+          group: currentGroup,
+          part: partVal ? String(partVal).trim() : null,
+          category: catVal ? String(catVal).trim() : null,
+          description: descVal ? String(descVal).trim() : null,
+          item: (itemVal !== null && itemVal !== undefined && itemVal !== "")
+            ? String(itemVal).trim()
+            : null,
+          secondaryProcess: secVal ? String(secVal).trim() : null,
+          location: locVal ? String(locVal).trim() : null
+        };
+
+        nodes.push(node);
+
+        if (node.part) {
+          const key = node.part.toUpperCase();
+          if (!rowsByPart[key]) rowsByPart[key] = [];
+          rowsByPart[key].push(node);
+        }
+
+        if (node.item && node.assemblyNo) {
+          const key = node.assemblyNo + "|" + node.item;
+          nodeIndex[key] = node;
+        }
+      }
+
+      sheetStatus.innerHTML = `<strong>Parsed:</strong> ${nodes.length} rows from sheet “${sheetName}”. You can now search by part number.`;
+      partInput.disabled = false;
+      searchBtn.disabled = false;
+    });
+
+    // ===== Search handler =====
+    searchBtn.addEventListener("click", () => {
+      const raw = partInput.value || "";
+      const key = raw.trim().toUpperCase();
+      clearResults();
+
+      if (!key) {
+        renderNoResult("Please enter a part number first.");
+        return;
+      }
+      if (!rowsByPart[key] || !rowsByPart[key].length) {
+        renderNoResult(`No rows found for part “${raw.trim()}”. Try for example A-43679, A-37344, etc.`);
+        return;
+      }
+
+      const nodesForPart = rowsByPart[key];
+      const chains = nodesForPart.map(buildChain);
+      renderChains(key, chains);
+    });
+
+    // Allow pressing Enter in the input to trigger search
+    partInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (!searchBtn.disabled) searchBtn.click();
+      }
+    });
+  </script>
+</body>
+</html>
