@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Process Route Explorer</title>
+  <title>Process Route Explorer (Multi-Sheet)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- XLSX.js for reading Excel in the browser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
@@ -140,6 +139,99 @@
       cursor: pointer;
     }
 
+    /* === NEW SHEET SELECTOR STYLES === */
+    .sheet-selection-area {
+      width: 100%;
+      margin-top: 12px;
+      margin-bottom: 8px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 255, 0.1);
+    }
+
+    .sheet-controls {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .sheet-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* Scrollbar styling for sheet list */
+    .sheet-grid::-webkit-scrollbar {
+      width: 6px;
+    }
+    .sheet-grid::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+    .sheet-grid::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 255, 0.3);
+      border-radius: 3px;
+    }
+
+    .sheet-chip {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 255, 0.2);
+      background: rgba(30, 41, 59, 0.6);
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all 0.2s ease;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .sheet-chip:hover {
+      border-color: #a5b4fc;
+      color: #e2e8f0;
+      background: rgba(30, 41, 59, 0.9);
+    }
+
+    /* Active State (Green Glow) */
+    .sheet-chip.active {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: #2cb67d;
+      color: #2cb67d;
+      font-weight: 600;
+      box-shadow: 0 0 10px rgba(44, 182, 125, 0.2);
+    }
+    
+    .sheet-chip.active::before {
+      content: "✓";
+      font-weight: bold;
+    }
+
+    .mini-btn {
+      background: transparent;
+      border: 1px solid rgba(148, 163, 255, 0.3);
+      color: #a5b4fc;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: none;
+    }
+    .mini-btn:hover:not(:disabled) {
+      background: rgba(148, 163, 255, 0.1);
+      border-color: #a5b4fc;
+      transform: none;
+      box-shadow: none;
+    }
+    /* ================================= */
+
     .chip {
       display: inline-flex;
       align-items: center;
@@ -151,6 +243,7 @@
       color: #c7d2fe;
       background: rgba(15, 23, 42, 0.8);
       min-height: 28px;
+      margin-left: auto; /* Push to right */
     }
 
     select,
@@ -172,7 +265,8 @@
       border-color: #7f5af0;
     }
 
-    button {
+    /* Main Action Button */
+    .action-btn {
       border-radius: 999px;
       border: 1px solid rgba(127, 90, 240, 0.8);
       background: radial-gradient(circle at top left, #7f5af0, #4338ca);
@@ -191,17 +285,14 @@
       transition: transform 0.16s ease-out, box-shadow 0.16s ease-out, opacity 0.16s ease-out;
     }
 
-    button span.icon {
-      font-size: 1rem;
-    }
-
-    button:disabled {
+    .action-btn:disabled {
       opacity: 0.4;
       cursor: default;
       box-shadow: none;
+      filter: grayscale(0.8);
     }
 
-    button:not(:disabled):hover {
+    .action-btn:not(:disabled):hover {
       transform: translateY(-1px);
       box-shadow:
         0 18px 35px rgba(15, 23, 42, 1),
@@ -400,12 +491,10 @@
         PROCESS ROUTE EXPLORER
       </div>
       <div class="app-subtitle">
-        Upload your MBOM Excel, type a part number, and see a human-readable route:
-        from blanks and processes up to its assembly.
+        Upload your MBOM Excel, select relevant sheets (Mech, Elec, etc.), and search for a part number to trace its route.
       </div>
     </header>
 
-    <!-- Upload / sheet selection -->
     <div class="glass-panel">
       <div class="panel-header">1 · Load MBOM</div>
       <div class="upload-row">
@@ -415,11 +504,9 @@
           <input id="fileInput" type="file" accept=".xlsx,.xls" />
         </label>
 
-        <select id="sheetSelect" disabled></select>
-
-        <button id="loadSheetBtn" disabled>
+        <button id="loadSheetBtn" class="action-btn" disabled>
           <span class="icon">⚙️</span>
-          <span>Parse sheet</span>
+          <span>Parse Selected Sheets</span>
         </button>
 
         <div id="fileStatus" class="chip">
@@ -427,10 +514,20 @@
           <span id="fileStatusText">No file loaded</span>
         </div>
       </div>
+      
+      <div class="sheet-selection-area" id="sheetArea" style="display:none;">
+        <div class="sheet-controls">
+          <span class="meta-label">Select Sheets:</span>
+          <button id="selectAllBtn" class="mini-btn">All</button>
+          <button id="selectNoneBtn" class="mini-btn">None</button>
+        </div>
+        <div id="sheetListContainer" class="sheet-grid">
+          </div>
+      </div>
+
       <div id="sheetStatus" class="status-line"></div>
     </div>
 
-    <!-- Search panel -->
     <div class="glass-panel">
       <div class="panel-header">2 · Trace a part</div>
       <div class="search-row">
@@ -440,20 +537,17 @@
           placeholder="Enter part number, e.g. A-43679"
           disabled
         />
-        <button id="searchBtn" disabled>
+        <button id="searchBtn" class="action-btn" disabled>
           <span class="icon">🔍</span>
           <span>Trace process</span>
         </button>
       </div>
       <div class="status-line">
-        Tip: this tool expects a sheet with headers like <strong>ASSEMBLY NO</strong>,
-        <strong>Item</strong>, <strong>Part #</strong>, <strong>Category</strong>,
-        <strong>Description</strong>, <strong>Secondary process</strong>,
-        <strong>Part Location/Process</strong>.
+        Tip: this tool expects sheets with headers like <strong>ASSEMBLY NO</strong>,
+        <strong>Part #</strong>, <strong>Category</strong>, etc.
       </div>
     </div>
 
-    <!-- Results -->
     <div class="glass-panel">
       <div class="panel-header">3 · Result</div>
       <div id="resultPanel"></div>
@@ -468,13 +562,18 @@
     let nodeIndex = {};            // assemblyNo|item -> Node
 
     const fileInput = document.getElementById("fileInput");
-    const sheetSelect = document.getElementById("sheetSelect");
     const loadSheetBtn = document.getElementById("loadSheetBtn");
     const fileStatusText = document.getElementById("fileStatusText");
     const sheetStatus = document.getElementById("sheetStatus");
     const partInput = document.getElementById("partInput");
     const searchBtn = document.getElementById("searchBtn");
     const resultPanel = document.getElementById("resultPanel");
+    
+    // Sheet UI elements
+    const sheetArea = document.getElementById("sheetArea");
+    const sheetListContainer = document.getElementById("sheetListContainer");
+    const selectAllBtn = document.getElementById("selectAllBtn");
+    const selectNoneBtn = document.getElementById("selectNoneBtn");
 
     // ===== Helpers =====
     function friendlyCategory(cat) {
@@ -489,7 +588,8 @@
         ASSM: "assembly",
         FASTN: "fastener",
         PURCH: "purchased part",
-        PTRAIN: "power-train item"
+        PTRAIN: "power-train item",
+        ELEC: "electrical component"
       };
       return map[c] || c;
     }
@@ -512,9 +612,10 @@
         if (n.assemblyNo !== node.assemblyNo) continue;
         if (!String(n.item).startsWith(prefix)) continue;
         if (n.part === node.part && n.item === node.item) continue;
-        // treat these as "process inputs" (can tune this list later)
+        
+        // Include common process inputs
         const cat = (n.category || "").toUpperCase();
-        if (["RAW", "LASER", "WJET", "MACH", "WELD", "PTRAIN", "FASTN", "PURCH", "CAST"].includes(cat)) {
+        if (["RAW", "LASER", "WJET", "MACH", "WELD", "PTRAIN", "FASTN", "PURCH", "CAST", "ELEC"].includes(cat)) {
           acc.push(n);
         }
       }
@@ -676,13 +777,12 @@
           secPill.innerHTML = `<span class="meta-label">Secondary</span><span>${node.secondaryProcess}</span>`;
           metaRow.appendChild(secPill);
         }
-
-        if (node.group != null && node.group !== "") {
-          const groupPill = document.createElement("div");
-          groupPill.className = "meta-pill";
-          groupPill.innerHTML = `<span class="meta-label">Group</span><span>${node.group}</span>`;
-          metaRow.appendChild(groupPill);
-        }
+        
+        // Show Source Sheet
+        const sheetPill = document.createElement("div");
+        sheetPill.className = "meta-pill";
+        sheetPill.innerHTML = `<span class="meta-label">Sheet</span><span>${node.sourceSheet || "N/A"}</span>`;
+        metaRow.appendChild(sheetPill);
 
         card.appendChild(metaRow);
 
@@ -722,8 +822,8 @@
 
       if (!file) {
         workbook = null;
-        sheetSelect.innerHTML = "";
-        sheetSelect.disabled = true;
+        sheetListContainer.innerHTML = "";
+        sheetArea.style.display = 'none';
         loadSheetBtn.disabled = true;
         partInput.disabled = true;
         searchBtn.disabled = true;
@@ -733,7 +833,7 @@
       }
 
       fileStatusText.textContent = `Loading: ${file.name}…`;
-      sheetStatus.textContent = "Reading workbook in your browser…";
+      sheetStatus.textContent = "Reading workbook…";
 
       const reader = new FileReader();
       reader.onload = function (e) {
@@ -748,144 +848,177 @@
           return;
         }
 
-        // Populate sheet dropdown
-        sheetSelect.innerHTML = "";
+        // GENERATE CHIP GRID
+        sheetListContainer.innerHTML = "";
+        sheetArea.style.display = 'block';
+
         workbook.SheetNames.forEach(name => {
-          const opt = document.createElement("option");
-          opt.value = name;
-          opt.textContent = name;
-          sheetSelect.appendChild(opt);
+          const chip = document.createElement("div");
+          chip.className = "sheet-chip";
+          chip.textContent = name;
+          chip.dataset.sheetname = name;
+          
+          // Click to toggle
+          chip.addEventListener("click", () => {
+             chip.classList.toggle("active");
+          });
+
+          // Optional: Auto-select if it looks like a main mechanical or electrical sheet
+          const up = name.toUpperCase();
+          if (up.includes("MECH") || up.includes("BOM") || up.includes("LIST")) {
+             chip.classList.add("active");
+          }
+
+          sheetListContainer.appendChild(chip);
         });
 
-        // Try to auto-pick a mechanical sheet
-        const mechName = workbook.SheetNames.find(n =>
-          n.toUpperCase().includes("OPMBOM_MECH.3429")
-        ) || workbook.SheetNames[0];
-
-        sheetSelect.value = mechName;
-        sheetSelect.disabled = false;
         loadSheetBtn.disabled = false;
-        fileStatusText.textContent = `Workbook loaded: ${file.name}`;
-        sheetStatus.textContent = `Select a sheet (default: ${mechName}) and click “Parse sheet”.`;
+        fileStatusText.textContent = `Loaded: ${file.name}`;
+        sheetStatus.textContent = `Found ${workbook.SheetNames.length} sheets. Select the ones you want to include, then click "Parse".`;
       };
       reader.readAsArrayBuffer(file);
     });
+    
+    // Select All / None Helpers
+    selectAllBtn.addEventListener("click", () => {
+        const chips = document.querySelectorAll(".sheet-chip");
+        chips.forEach(c => c.classList.add("active"));
+    });
+    
+    selectNoneBtn.addEventListener("click", () => {
+        const chips = document.querySelectorAll(".sheet-chip");
+        chips.forEach(c => c.classList.remove("active"));
+    });
 
-    // ===== Parse chosen sheet into our Node graph =====
+    // ===== Parse Logic (Multi-Sheet) =====
     loadSheetBtn.addEventListener("click", () => {
       if (!workbook) return;
-      const sheetName = sheetSelect.value;
-      const ws = workbook.Sheets[sheetName];
-      if (!ws) {
-        sheetStatus.textContent = "Selected sheet not found in workbook.";
+
+      const activeChips = document.querySelectorAll(".sheet-chip.active");
+      if (activeChips.length === 0) {
+        sheetStatus.innerHTML = "<span style='color:#fbbf24'>Please select at least one sheet above.</span>";
         return;
       }
 
+      sheetStatus.textContent = "Parsing selected sheets…";
       clearResults();
-      sheetStatus.textContent = "Parsing sheet structure…";
 
-      // Read all rows as raw arrays
-      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-      if (!rows.length) {
-        sheetStatus.textContent = "Sheet is empty.";
-        return;
-      }
-
-      // Find header row (look for "Part #" + "Category")
-      let headerIndex = -1;
-      for (let i = 0; i < Math.min(10, rows.length); i++) {
-        const row = rows[i] || [];
-        if (row.includes("Part #") && row.includes("Category") && row.includes("ASSEMBLY NO")) {
-          headerIndex = i;
-          break;
-        }
-      }
-      if (headerIndex === -1) {
-        sheetStatus.textContent = "Could not find header row (no Part # / Category / ASSEMBLY NO).";
-        return;
-      }
-
-      const header = rows[headerIndex];
-      const colIndex = {};
-      header.forEach((name, idx) => {
-        if (name) colIndex[name] = idx;
-      });
-
-      function idx(name) {
-        return colIndex.hasOwnProperty(name) ? colIndex[name] : -1;
-      }
-
-      const idxAsm = idx("ASSEMBLY NO");
-      const idxItem = idx("Item");
-      const idxPart = idx("Part #");
-      const idxCat = idx("Category");
-      const idxDesc = idx("Description");
-      const idxGroup = idx("Group");
-      const idxSec = idx("Secondary process");
-      const idxLoc = idx("Part Location/Process");
-
-      if (idxAsm === -1 || idxItem === -1 || idxPart === -1 || idxCat === -1 || idxDesc === -1) {
-        sheetStatus.textContent = "Header row missing one of the required columns.";
-        return;
-      }
-
+      // RESET GLOBAL DATA
       nodes = [];
       rowsByPart = {};
       nodeIndex = {};
+      
+      let totalParsedRows = 0;
+      let sheetsParsedCount = 0;
 
-      let currentAssembly = null;
-      let currentAsmDesc = null;
-      let currentGroup = null;
+      // Iterate over every selected sheet
+      activeChips.forEach(chip => {
+          const sheetName = chip.dataset.sheetname;
+          const ws = workbook.Sheets[sheetName];
+          if(!ws) return;
 
-      for (let r = headerIndex + 1; r < rows.length; r++) {
-        const row = rows[r] || [];
-        const asmVal = row[idxAsm];
-        if (asmVal) {
-          currentAssembly = String(asmVal).trim();
-          const descVal = row[idxDesc];
-          currentAsmDesc = descVal ? String(descVal).trim() : null;
-          const gVal = row[idxGroup];
-          if (gVal !== null && gVal !== undefined && gVal !== "") {
-            currentGroup = gVal;
+          // 1. Read rows
+          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+          if (!rows.length) return;
+
+          // 2. Dynamic Header Search (per sheet)
+          let headerIndex = -1;
+          for (let i = 0; i < Math.min(20, rows.length); i++) {
+            const row = rows[i] || [];
+            // Looser check: needs Part # and Category at minimum to be useful
+            if (row.includes("Part #") && row.includes("Category")) {
+              headerIndex = i;
+              break;
+            }
           }
-        }
 
-        const partVal = row[idxPart];
-        const catVal = row[idxCat];
-        const descVal = row[idxDesc];
-        const itemVal = row[idxItem];
-        const secVal = idxSec !== -1 ? row[idxSec] : null;
-        const locVal = idxLoc !== -1 ? row[idxLoc] : null;
+          if (headerIndex === -1) {
+             console.warn(`Skipping sheet ${sheetName}: Could not find headers.`);
+             return; // Skip this sheet
+          }
 
-        const node = {
-          assemblyNo: currentAssembly,
-          assemblyDescription: currentAsmDesc,
-          group: currentGroup,
-          part: partVal ? String(partVal).trim() : null,
-          category: catVal ? String(catVal).trim() : null,
-          description: descVal ? String(descVal).trim() : null,
-          item: (itemVal !== null && itemVal !== undefined && itemVal !== "")
-            ? String(itemVal).trim()
-            : null,
-          secondaryProcess: secVal ? String(secVal).trim() : null,
-          location: locVal ? String(locVal).trim() : null
-        };
+          // 3. Map columns
+          const header = rows[headerIndex];
+          const colIndex = {};
+          header.forEach((name, idx) => {
+            if (name) colIndex[name] = idx;
+          });
 
-        nodes.push(node);
+          function idx(name) { return colIndex.hasOwnProperty(name) ? colIndex[name] : -1; }
+          
+          const idxAsm = idx("ASSEMBLY NO");
+          const idxItem = idx("Item");
+          const idxPart = idx("Part #");
+          const idxCat = idx("Category");
+          const idxDesc = idx("Description");
+          const idxGroup = idx("Group");
+          const idxSec = idx("Secondary process");
+          const idxLoc = idx("Part Location/Process");
 
-        if (node.part) {
-          const key = node.part.toUpperCase();
-          if (!rowsByPart[key]) rowsByPart[key] = [];
-          rowsByPart[key].push(node);
-        }
+          // 4. Extract Data
+          let currentAssembly = null;
+          let currentAsmDesc = null;
+          let currentGroup = null;
 
-        if (node.item && node.assemblyNo) {
-          const key = node.assemblyNo + "|" + node.item;
-          nodeIndex[key] = node;
-        }
-      }
+          for (let r = headerIndex + 1; r < rows.length; r++) {
+            const row = rows[r] || [];
+            
+            // Assembly context fill-down (basic)
+            if (idxAsm !== -1) {
+                const asmVal = row[idxAsm];
+                if (asmVal) {
+                  currentAssembly = String(asmVal).trim();
+                  if(idxDesc !== -1) {
+                      const descVal = row[idxDesc];
+                      currentAsmDesc = descVal ? String(descVal).trim() : null;
+                  }
+                  if(idxGroup !== -1) {
+                     const gVal = row[idxGroup];
+                     if (gVal) currentGroup = gVal;
+                  }
+                }
+            }
 
-      sheetStatus.innerHTML = `<strong>Parsed:</strong> ${nodes.length} rows from sheet “${sheetName}”. You can now search by part number.`;
+            const partVal = idxPart !== -1 ? row[idxPart] : null;
+            const catVal = idxCat !== -1 ? row[idxCat] : null;
+            const descVal = idxDesc !== -1 ? row[idxDesc] : null;
+            const itemVal = idxItem !== -1 ? row[idxItem] : null;
+            const secVal = idxSec !== -1 ? row[idxSec] : null;
+            const locVal = idxLoc !== -1 ? row[idxLoc] : null;
+
+            // Only store if we have a part number
+            if (partVal) {
+                const node = {
+                  sourceSheet: sheetName, // Track where it came from
+                  assemblyNo: currentAssembly,
+                  assemblyDescription: currentAsmDesc,
+                  group: currentGroup,
+                  part: String(partVal).trim(),
+                  category: catVal ? String(catVal).trim() : null,
+                  description: descVal ? String(descVal).trim() : null,
+                  item: (itemVal) ? String(itemVal).trim() : null,
+                  secondaryProcess: secVal ? String(secVal).trim() : null,
+                  location: locVal ? String(locVal).trim() : null
+                };
+
+                nodes.push(node);
+                totalParsedRows++;
+
+                // Indexing
+                const key = node.part.toUpperCase();
+                if (!rowsByPart[key]) rowsByPart[key] = [];
+                rowsByPart[key].push(node);
+
+                if (node.item && node.assemblyNo) {
+                  const treeKey = node.assemblyNo + "|" + node.item;
+                  nodeIndex[treeKey] = node;
+                }
+            }
+          }
+          sheetsParsedCount++;
+      });
+
+      sheetStatus.innerHTML = `<strong>Success!</strong> Parsed ${totalParsedRows} rows from ${sheetsParsedCount} sheets. Ready to search.`;
       partInput.disabled = false;
       searchBtn.disabled = false;
     });
@@ -901,7 +1034,7 @@
         return;
       }
       if (!rowsByPart[key] || !rowsByPart[key].length) {
-        renderNoResult(`No rows found for part “${raw.trim()}”. Try for example A-43679, A-37344, etc.`);
+        renderNoResult(`No rows found for part “${raw.trim()}”. (Checked ${nodes.length} rows)`);
         return;
       }
 
