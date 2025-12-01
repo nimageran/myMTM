@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Process Route Explorer v3</title>
+  <title>Process Route Explorer v4 (Visual)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <!-- XLSX.js for reading Excel in the browser -->
+  
+  <!-- XLSX.js for reading Excel -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Mermaid.js for Diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 
   <style>
     /* === BASE THEME === */
@@ -15,7 +18,6 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
       color: #e5e7ff;
-      /* Deep space background */
       background: radial-gradient(circle at top, #1d1b3a 0%, #050816 40%, #02010a 100%);
       overflow-x: hidden;
     }
@@ -37,7 +39,7 @@
     .app-shell {
       position: relative;
       z-index: 1;
-      max-width: 1000px;
+      max-width: 1100px;
       margin: 24px auto 60px;
       padding: 16px;
     }
@@ -95,7 +97,6 @@
       align-items: center;
     }
 
-    /* Custom File Input */
     .file-label {
       display: inline-flex;
       align-items: center;
@@ -111,7 +112,6 @@
     .file-label:hover { border-color: #7f5af0; color: #fff; }
     .file-label input { display: none; }
 
-    /* Text Input */
     input[type="text"] {
       background: rgba(15, 23, 42, 0.8);
       border: 1px solid rgba(148, 163, 255, 0.3);
@@ -128,7 +128,6 @@
       box-shadow: 0 0 0 2px rgba(127, 90, 240, 0.2);
     }
 
-    /* Action Button */
     .action-btn {
       background: linear-gradient(135deg, #7f5af0, #6246ea);
       color: white;
@@ -152,7 +151,7 @@
       cursor: not-allowed;
     }
 
-    /* === SHEET SELECTOR (CHIPS) === */
+    /* === SHEET SELECTOR === */
     .sheet-area {
       margin-top: 16px;
       background: rgba(0, 0, 0, 0.2);
@@ -195,9 +194,6 @@
       user-select: none;
       transition: all 0.15s;
     }
-    .sheet-chip:hover { border-color: #64748b; color: #e2e8f0; }
-    
-    /* Selected State */
     .sheet-chip.active {
       background: rgba(44, 182, 125, 0.15);
       border-color: #2cb67d;
@@ -206,7 +202,7 @@
       box-shadow: 0 0 8px rgba(44, 182, 125, 0.15);
     }
 
-    /* === RESULTS: METRO MAP === */
+    /* === RESULTS LAYOUT === */
     .route-card {
       background: rgba(15, 23, 42, 0.6);
       border: 1px solid rgba(148, 163, 255, 0.2);
@@ -223,125 +219,91 @@
       justify-content: space-between;
       align-items: center;
     }
-    .route-title {
-      font-size: 0.9rem;
-      color: #94a3b8;
-      font-weight: 600;
-      text-transform: uppercase;
+
+    /* Two Columns: Text Flow (Metro) + Visual Graph (Mind Map) */
+    .result-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    @media (max-width: 800px) {
+      .result-grid { grid-template-columns: 1fr; }
     }
 
-    /* The Flow Container */
+    /* === METRO MAP (Text Side) === */
     .flow-container {
-      padding: 20px 20px 20px 30px;
-      display: flex;
-      flex-direction: column;
+      padding: 20px;
+      border-right: 1px solid rgba(148, 163, 255, 0.1);
     }
-
     .flow-step {
       position: relative;
-      padding-left: 24px; /* Space for the line */
+      padding-left: 24px;
       padding-bottom: 24px;
       border-left: 2px solid rgba(148, 163, 255, 0.2);
     }
-    .flow-step:last-child {
-      border-left-color: transparent;
-      padding-bottom: 0;
-    }
-
-    /* The Dot */
+    .flow-step:last-child { border-left-color: transparent; padding-bottom: 0; }
     .flow-step::before {
       content: "";
       position: absolute;
-      left: -6px; /* Center on 2px border */
-      top: 2px;
-      width: 10px;
-      height: 10px;
+      left: -6px; top: 2px;
+      width: 10px; height: 10px;
       border-radius: 50%;
       background: #0f172a;
       border: 2px solid #64748b;
       z-index: 2;
     }
-
-    /* Connection Variations */
     .flow-step.is-parent::before { border-color: #2cb67d; background: #2cb67d; }
-    .flow-step.is-focus::before { 
-      border-color: #7f5af0; 
-      background: #7f5af0; 
-      width: 14px; height: 14px; 
-      left: -8px; 
-    }
+    .flow-step.is-focus::before { border-color: #7f5af0; background: #7f5af0; width: 14px; height: 14px; left: -8px; }
     .flow-step.is-child::before { border-color: #94a3b8; }
 
-    /* The Card Content inside the step */
     .step-label {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      color: #64748b;
-      margin-bottom: 6px;
-      letter-spacing: 0.05em;
-      font-weight: 700;
+      font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin-bottom: 6px; font-weight: 700;
     }
-
     .step-card {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 12px;
-      transition: all 0.2s;
+      background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px; transition: all 0.2s;
     }
-
-    /* Focus Card (The middle one) */
     .step-card.focus-card {
       background: linear-gradient(135deg, rgba(127, 90, 240, 0.1), rgba(15, 23, 42, 0.8));
       border-color: #7f5af0;
-      box-shadow: 0 0 15px rgba(127, 90, 240, 0.15);
     }
-
-    /* Typography inside cards */
-    .part-name {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: #f1f5f9;
-    }
-    .part-desc {
-      font-size: 0.9rem;
-      color: #cbd5e1;
-      margin-top: 4px;
-    }
-    .part-meta {
-      margin-top: 8px;
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    .part-name { font-size: 1.1rem; font-weight: 700; color: #f1f5f9; }
+    .part-desc { font-size: 0.9rem; color: #cbd5e1; margin-top: 4px; }
+    .part-meta { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
     .meta-tag {
-      font-size: 0.75rem;
-      padding: 2px 8px;
-      border-radius: 4px;
-      background: rgba(0,0,0,0.3);
-      border: 1px solid rgba(255,255,255,0.1);
-      color: #94a3b8;
+      font-size: 0.75rem; padding: 2px 8px; border-radius: 4px;
+      background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: #94a3b8;
     }
-
-    /* Clickable Link Styling */
     .clickable-part {
-      color: #2cb67d;
-      cursor: pointer;
-      text-decoration: underline;
-      text-decoration-style: dotted;
-      text-decoration-thickness: 1px;
-      text-underline-offset: 4px;
+      color: #2cb67d; cursor: pointer; text-decoration: underline; text-decoration-style: dotted;
     }
-    .clickable-part:hover {
-      color: #4ade80;
-      text-decoration-style: solid;
+    .clickable-part:hover { color: #4ade80; text-decoration-style: solid; }
+
+    /* === DIAGRAM SIDE === */
+    .visual-container {
+      padding: 20px;
+      background: rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+    }
+    .viz-title {
+      width: 100%;
+      text-align: center;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    .mermaid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
     }
 
-    .status-msg {
-      margin-top: 8px;
-      font-size: 0.85rem;
-      color: #94a3b8;
-    }
+    .status-msg { margin-top: 8px; font-size: 0.85rem; color: #94a3b8; }
     .status-msg strong { color: #e2e8f0; }
     .error-msg { color: #f87171; }
 
@@ -359,8 +321,8 @@
         Process Route Explorer
       </div>
       <div class="app-subtitle">
-        MTM Production Engineering Tool. Load your MBOM, select relevant sheets (Mech/Elec), 
-        and trace parts from raw materials up to parent assemblies.
+        MTM Production Engineering Tool. Load your MBOM, select relevant sheets, 
+        and visualize part relationships immediately.
       </div>
     </header>
 
@@ -377,10 +339,9 @@
         </button>
       </div>
 
-      <!-- Sheet Selection Grid -->
       <div id="sheetArea" class="sheet-area" style="display:none;">
         <div class="sheet-actions">
-          <span style="font-size:0.8rem; color:#94a3b8;">Select Sheets to Scan:</span>
+          <span style="font-size:0.8rem; color:#94a3b8;">Select Sheets:</span>
           <button id="btnAll" class="mini-btn">Select All</button>
           <button id="btnNone" class="mini-btn">Select None</button>
         </div>
@@ -399,9 +360,6 @@
           <span>🔍 Trace Path</span>
         </button>
       </div>
-      <div class="status-msg">
-        Tip: Click on any <strong>Parent</strong> or <strong>Input</strong> in the results to jump to that part immediately.
-      </div>
     </div>
 
     <!-- 3. RESULTS -->
@@ -409,11 +367,18 @@
   </div>
 
   <script>
+    // Initialize Mermaid for Diagrams
+    mermaid.initialize({ 
+      startOnLoad: false,
+      theme: 'dark',
+      securityLevel: 'loose',
+    });
+
     // === GLOBAL STATE ===
     let workbook = null;
-    let nodes = [];       // Flat list of all rows
-    let rowsByPart = {};  // Map: PartNumber -> [Node, Node]
-    let nodeIndex = {};   // Map: Assembly|Item -> Node (for tree climbing)
+    let nodes = [];       
+    let rowsByPart = {};  
+    let nodeIndex = {};   
 
     // DOM Elements
     const fileInput = document.getElementById('fileInput');
@@ -433,7 +398,7 @@
       const file = e.target.files[0];
       if (!file) return;
 
-      statusLoad.innerHTML = "Reading file... please wait.";
+      statusLoad.innerHTML = "Reading file...";
       const reader = new FileReader();
       
       reader.onload = function(evt) {
@@ -441,11 +406,11 @@
         try {
           workbook = XLSX.read(data, {type: 'array'});
           renderSheetSelector(workbook.SheetNames);
-          statusLoad.innerHTML = `Loaded <strong>${file.name}</strong>. Select sheets below.`;
+          statusLoad.innerHTML = `Loaded <strong>${file.name}</strong>. Select sheets.`;
           parseBtn.disabled = false;
         } catch (err) {
           console.error(err);
-          statusLoad.innerHTML = `<span class="error-msg">Error reading file. Ensure it is a valid Excel file.</span>`;
+          statusLoad.innerHTML = `<span class="error-msg">Error reading file.</span>`;
         }
       };
       reader.readAsArrayBuffer(file);
@@ -454,19 +419,15 @@
     function renderSheetSelector(names) {
       sheetArea.style.display = 'block';
       sheetGrid.innerHTML = '';
-      
       names.forEach(name => {
         const chip = document.createElement('div');
         chip.className = 'sheet-chip';
         chip.textContent = name;
         chip.dataset.name = name;
-        
-        // Auto-select likely candidates (Mech, BOM, List)
         const up = name.toUpperCase();
-        if (up.includes('MECH') || up.includes('BOM') || up.includes('LIST') || !up.includes('LOG')) {
+        if (up.includes('MECH') || up.includes('BOM') || up.includes('LIST')) {
           chip.classList.add('active');
         }
-        
         chip.onclick = () => chip.classList.toggle('active');
         sheetGrid.appendChild(chip);
       });
@@ -475,78 +436,55 @@
     btnAll.onclick = () => document.querySelectorAll('.sheet-chip').forEach(c => c.classList.add('active'));
     btnNone.onclick = () => document.querySelectorAll('.sheet-chip').forEach(c => c.classList.remove('active'));
 
-    // === 2. PARSING (THE HEAVY LIFTING) ===
+    // === 2. PARSING ===
     parseBtn.addEventListener('click', () => {
       const activeChips = document.querySelectorAll('.sheet-chip.active');
-      if (activeChips.length === 0) {
-        alert("Please select at least one sheet.");
-        return;
-      }
+      if (activeChips.length === 0) { alert("Select at least one sheet."); return; }
 
-      statusLoad.innerHTML = "Parsing sheets... this may take a moment.";
+      statusLoad.innerHTML = "Parsing sheets...";
       
-      // Reset Data
-      nodes = [];
-      rowsByPart = {};
-      nodeIndex = {};
+      // Clear old data
+      nodes = []; rowsByPart = {}; nodeIndex = {};
 
       setTimeout(() => {
         let count = 0;
-        
         activeChips.forEach(chip => {
           const sheetName = chip.dataset.name;
           const ws = workbook.Sheets[sheetName];
           if (!ws) return;
-
           const rows = XLSX.utils.sheet_to_json(ws, {header: 1, defval: null});
           if (!rows || rows.length < 2) return;
 
-          // Find Header Row dynamically
           let headerIdx = -1;
           for(let i=0; i<Math.min(20, rows.length); i++) {
             const r = rows[i] || [];
-            // We look for 'Part #' and 'Category' as anchors
-            if (r.includes('Part #') && r.includes('Category')) {
-              headerIdx = i;
-              break;
-            }
+            if (r.includes('Part #') && r.includes('Category')) { headerIdx = i; break; }
           }
+          if (headerIdx === -1) return;
 
-          if (headerIdx === -1) return; // Skip sheets that don't look like BOMs
-
-          // Map columns
           const header = rows[headerIdx];
           const colMap = {};
           header.forEach((h, idx) => { if(h) colMap[h.trim()] = idx; });
-
           const getVal = (row, name) => {
              const idx = colMap[name];
              return (idx !== undefined && row[idx]) ? String(row[idx]).trim() : null;
           };
 
-          // Fill-down variables
-          let curAsm = null;
-          let curAsmDesc = null;
-
+          let curAsm = null; let curAsmDesc = null;
           for(let r=headerIdx+1; r<rows.length; r++) {
             const row = rows[r];
             if (!row) continue;
-
-            // Handle Assembly Context (Fill Down)
             const asmVal = getVal(row, 'ASSEMBLY NO');
             if (asmVal) {
               curAsm = asmVal;
-              const desc = getVal(row, 'Description'); 
-              // Only update assembly desc if we are on the assembly header line
-              if (colMap['ASSEMBLY NO'] !== undefined) curAsmDesc = desc; 
+              if (colMap['ASSEMBLY NO'] !== undefined) curAsmDesc = getVal(row, 'Description'); 
             }
-
             const part = getVal(row, 'Part #');
             if (part) {
               const node = {
                 sheet: sheetName,
                 assemblyNo: curAsm,
-                assemblyDesc: curAsmDesc, // Note: this might be loose, but acceptable
+                assemblyDesc: curAsmDesc,
                 part: part,
                 category: getVal(row, 'Category'),
                 desc: getVal(row, 'Description'),
@@ -555,32 +493,21 @@
                 sec: getVal(row, 'Secondary process'),
                 qty: getVal(row, 'Qty')
               };
-
               nodes.push(node);
               count++;
-
-              // Indexing
               const k = part.toUpperCase();
               if (!rowsByPart[k]) rowsByPart[k] = [];
               rowsByPart[k].push(node);
-
-              if (node.assemblyNo && node.item) {
-                nodeIndex[`${node.assemblyNo}|${node.item}`] = node;
-              }
+              if (node.assemblyNo && node.item) nodeIndex[`${node.assemblyNo}|${node.item}`] = node;
             }
           }
         });
-
-        statusLoad.innerHTML = `Success! Parsed <strong>${count}</strong> parts from ${activeChips.length} sheets.`;
-        partInput.disabled = false;
-        searchBtn.disabled = false;
-        partInput.focus();
-      }, 50); // Small timeout to allow UI to update text
+        statusLoad.innerHTML = `Success! Parsed <strong>${count}</strong> parts.`;
+        partInput.disabled = false; searchBtn.disabled = false; partInput.focus();
+      }, 50);
     });
 
-    // === 3. SEARCH & TRACE LOGIC ===
-    
-    // Global function for clicking links
+    // === 3. SEARCH ===
     window.jumpToPart = function(p) {
       partInput.value = p;
       performSearch();
@@ -589,158 +516,177 @@
     searchBtn.addEventListener('click', performSearch);
     partInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') performSearch(); });
 
-    function performSearch() {
+    async function performSearch() {
       const raw = partInput.value.trim();
       if (!raw) return;
       const key = raw.toUpperCase();
-      
       resultsContainer.innerHTML = '';
 
       if (!rowsByPart[key]) {
-        resultsContainer.innerHTML = `
-          <div class="glass-panel" style="text-align:center; color:#fbbf24;">
-            No results found for <strong>${raw}</strong>.
-          </div>`;
+        resultsContainer.innerHTML = `<div class="glass-panel" style="text-align:center; color:#fbbf24;">No results found for <strong>${raw}</strong>.</div>`;
         return;
       }
 
       const matches = rowsByPart[key];
-      matches.forEach((node, index) => {
-        const chain = buildChain(node);
-        renderChain(chain, index + 1);
-      });
+      // Render results sequentially to handle diagram generation
+      for (let i = 0; i < matches.length; i++) {
+        const chain = buildChain(matches[i]);
+        await renderChain(chain, i + 1);
+      }
     }
 
     function buildChain(node) {
-      // 1. Find Parents (Up the tree)
       const parents = [];
       let current = node;
-      
-      // Basic loop protection
       let safety = 0;
       while (current && current.item && current.assemblyNo && safety < 20) {
-        // Logic: if item is 1.2.3, parent is 1.2
         const parts = current.item.split('.');
-        if (parts.length <= 1) break; // Top level
+        if (parts.length <= 1) break; 
         parts.pop();
         const parentItem = parts.join('.');
-        
         const parentNode = nodeIndex[`${current.assemblyNo}|${parentItem}`];
-        if (parentNode) {
-          parents.push(parentNode);
-          current = parentNode;
-        } else {
-          break;
-        }
+        if (parentNode) { parents.push(parentNode); current = parentNode; } 
+        else { break; }
         safety++;
       }
 
-      // 2. Find Inputs (Down the tree - Raw Materials)
-      // We look for other nodes in the SAME assembly whose Item starts with our Item
-      // e.g. If we are 1.2, inputs are 1.2.1, 1.2.2 (immediate children)
       const inputs = [];
       if (node.assemblyNo && node.item) {
         const prefix = node.item + '.';
-        // We scan the flat list (optimization: could index by assembly to speed this up)
-        // Since dataset is likely <10k rows, linear scan of filtered set is okay-ish, 
-        // but let's try to be smarter. We can iterate specific assembly bucket if we had one.
-        // For now, linear scan is robust enough for typical MBOM sizes.
-        
-        // Filter: Must be same assembly, Item must start with prefix, 
-        // AND should not have *another* dot (direct child only)
         const depth = node.item.split('.').length + 1;
-        
         nodes.forEach(n => {
           if (n.assemblyNo === node.assemblyNo && n.item && n.item.startsWith(prefix)) {
-             const nDepth = n.item.split('.').length;
-             // Only include immediate children (inputs)
-             if (nDepth === depth) {
-               // Optional: Filter for "Material" categories only? 
-               // Nima usually wants everything that goes INTO it.
-               inputs.push(n);
-             }
+             if (n.item.split('.').length === depth) inputs.push(n);
           }
         });
       }
-
       return { node, parents, inputs };
     }
 
-    // === 4. RENDERING (METRO MAP) ===
-    function renderChain(data, idx) {
+    // === 4. RENDER (METRO MAP + MERMAID DIAGRAM) ===
+    async function renderChain(data, idx) {
       const { node, parents, inputs } = data;
 
       const card = document.createElement('div');
       card.className = 'route-card';
+      card.innerHTML = `<div class="route-header"><span>Occurrence #${idx}</span><span>${node.sheet}</span></div>`;
 
-      // Header
-      card.innerHTML = `
-        <div class="route-header">
-          <span>Occurrence #${idx}</span>
-          <span>${node.sheet}</span>
-        </div>
-      `;
+      // Grid Layout
+      const grid = document.createElement('div');
+      grid.className = 'result-grid';
 
+      // --- Left Column: Metro Map (Text) ---
       const flow = document.createElement('div');
       flow.className = 'flow-container';
-
-      // A. PARENTS (Downstream - Where this goes)
-      // Reverse parents so Highest Assembly is at the top
-      [...parents].reverse().forEach(p => {
-        flow.appendChild(createStep('is-parent', 'Used In (Parent)', p, true));
-      });
-
-      // B. CURRENT PART (Focus)
+      [...parents].reverse().forEach(p => flow.appendChild(createStep('is-parent', 'Parent', p, true)));
       flow.appendChild(createStep('is-focus', 'Current Part', node, false));
-
-      // C. INPUTS (Upstream - What goes into this)
       if (inputs.length > 0) {
-        inputs.forEach(inp => {
-          flow.appendChild(createStep('is-child', 'Input (Material/Child)', inp, true));
-        });
+        inputs.forEach(inp => flow.appendChild(createStep('is-child', 'Input', inp, true)));
       } else {
-        // No inputs
         const empty = document.createElement('div');
         empty.className = 'flow-step is-child';
-        empty.innerHTML = `<div class="step-label">No sub-components found</div>`;
+        empty.innerHTML = `<div class="step-label">No sub-components</div>`;
         flow.appendChild(empty);
       }
+      grid.appendChild(flow);
 
-      card.appendChild(flow);
+      // --- Right Column: Mermaid Diagram (Visual) ---
+      const vizDiv = document.createElement('div');
+      vizDiv.className = 'visual-container';
+      vizDiv.innerHTML = `<div class="viz-title">Visual Process Map</div>`;
+      
+      const chartId = `mermaid-${Date.now()}-${idx}`;
+      const chartDiv = document.createElement('div');
+      chartDiv.id = chartId;
+      chartDiv.className = 'mermaid';
+      vizDiv.appendChild(chartDiv);
+      grid.appendChild(vizDiv);
+      
+      card.appendChild(grid);
       resultsContainer.appendChild(card);
+
+      // GENERATE DIAGRAM
+      // Sanitize ID for Mermaid (remove spaces/dashes)
+      const safeId = (str) => str.replace(/[^a-zA-Z0-9]/g, '_');
+      
+      let graph = `graph LR\n`;
+      // Styles
+      graph += `classDef focus fill:#7f5af0,stroke:#fff,stroke-width:2px,color:#fff;\n`;
+      graph += `classDef parent fill:#2cb67d,stroke:#333,color:#fff;\n`;
+      graph += `classDef input fill:#1e293b,stroke:#94a3b8,color:#cbd5e1;\n`;
+
+      // Focus Node
+      const fId = "F_" + safeId(node.part);
+      graph += `${fId}["${node.part}"]:::focus\n`;
+
+      // Connect Parents
+      let prevId = null;
+      // We want Highest -> Lower -> Lowest Parent
+      [...parents].reverse().forEach((p, i) => {
+        const pId = "P_" + i + "_" + safeId(p.part);
+        graph += `${pId}["${p.part}"]:::parent\n`;
+        if (i === 0) {
+           // First parent is standalone start? 
+           // Or just link them in chain
+        }
+        if (prevId) {
+          graph += `${prevId} --> ${pId}\n`;
+        }
+        prevId = pId;
+      });
+      // Last parent connects to Focus
+      if (prevId) graph += `${prevId} --> ${fId}\n`;
+
+      // Connect Inputs
+      if (inputs.length > 0) {
+        inputs.forEach((inp, i) => {
+           const iId = "I_" + i + "_" + safeId(inp.part);
+           // Limit label length
+           let lbl = inp.part;
+           if(inp.category) lbl += "<br/>(" + friendlyCat(inp.category) + ")";
+           graph += `${iId}["${lbl}"]:::input\n`;
+           graph += `${fId} --> ${iId}\n`;
+        });
+      }
+
+      // Render the diagram
+      try {
+        const { svg } = await mermaid.render(chartId + "-svg", graph);
+        chartDiv.innerHTML = svg;
+      } catch (e) {
+        console.error("Mermaid error:", e);
+        chartDiv.innerHTML = `<span class="error-msg">Diagram gen failed</span>`;
+      }
     }
 
     function createStep(typeClass, label, data, isClickable) {
       const el = document.createElement('div');
       el.className = `flow-step ${typeClass}`;
-      
       const nameClass = isClickable ? 'part-name clickable-part' : 'part-name';
       const clickAttr = isClickable ? `onclick="jumpToPart('${data.part}')"` : '';
-
       el.innerHTML = `
         <div class="step-label">${label}</div>
         <div class="step-card ${typeClass === 'is-focus' ? 'focus-card' : ''}">
           <div class="${nameClass}" ${clickAttr}>${data.part}</div>
-          <div class="part-desc">${data.desc || 'No description'}</div>
+          <div class="part-desc">${data.desc || 'No desc'}</div>
           <div class="part-meta">
-             <span class="meta-tag">📂 ${friendlyCat(data.category)}</span>
-             ${data.loc ? `<span class="meta-tag">📍 ${data.loc}</span>` : ''}
-             ${data.sec ? `<span class="meta-tag">⚙️ ${data.sec}</span>` : ''}
-             ${data.qty ? `<span class="meta-tag">Qty: ${data.qty}</span>` : ''}
+             <span class="meta-tag">${friendlyCat(data.category)}</span>
+             ${data.loc ? `<span class="meta-tag">📍${data.loc}</span>` : ''}
           </div>
-        </div>
-      `;
+        </div>`;
       return el;
     }
 
     function friendlyCat(cat) {
-      if (!cat) return 'Unspecified';
-      const map = {
-        'RAW': 'Raw Material', 'LASER': 'Laser Cut', 'WELD': 'Weldment',
-        'MACH': 'Machined', 'ASSM': 'Assembly', 'PURCH': 'Purchased',
-        'FASTN': 'Fastener', 'ELEC': 'Electrical'
-      };
-      return map[cat.toUpperCase()] || cat;
+      if (!cat) return 'Item';
+      const c = cat.toUpperCase();
+      if(c.includes('RAW')) return 'Raw';
+      if(c.includes('LASER')) return 'Laser';
+      if(c.includes('WELD')) return 'Weld';
+      if(c.includes('ASSM')) return 'Assm';
+      if(c.includes('PURCH')) return 'Buy';
+      if(c.includes('FASTN')) return 'Bolt';
+      return cat;
     }
 
   </script>
