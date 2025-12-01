@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Process Route Explorer v4 (Visual)</title>
+  <title>Process Route Explorer v5 (Process Flow)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
   <!-- XLSX.js for reading Excel -->
@@ -252,9 +252,10 @@
       border: 2px solid #64748b;
       z-index: 2;
     }
-    .flow-step.is-parent::before { border-color: #2cb67d; background: #2cb67d; }
+    /* Updated Colors for Flow Logic */
+    .flow-step.is-child::before { border-color: #94a3b8; } /* Input */
     .flow-step.is-focus::before { border-color: #7f5af0; background: #7f5af0; width: 14px; height: 14px; left: -8px; }
-    .flow-step.is-child::before { border-color: #94a3b8; }
+    .flow-step.is-parent::before { border-color: #2cb67d; background: #2cb67d; } /* Output */
 
     .step-label {
       font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin-bottom: 6px; font-weight: 700;
@@ -322,7 +323,7 @@
       </div>
       <div class="app-subtitle">
         MTM Production Engineering Tool. Load your MBOM, select relevant sheets, 
-        and visualize part relationships immediately.
+        and visualize the Process Flow (Inputs → Part → Assembly).
       </div>
     </header>
 
@@ -563,7 +564,7 @@
       return { node, parents, inputs };
     }
 
-    // === 4. RENDER (METRO MAP + MERMAID DIAGRAM) ===
+    // === 4. RENDER (FLOW CORRECTED: Input -> Focus -> Parent) ===
     async function renderChain(data, idx) {
       const { node, parents, inputs } = data;
 
@@ -576,24 +577,41 @@
       grid.className = 'result-grid';
 
       // --- Left Column: Metro Map (Text) ---
+      // NEW ORDER: Inputs (Top) -> Focus -> Parents (Bottom)
       const flow = document.createElement('div');
       flow.className = 'flow-container';
-      [...parents].reverse().forEach(p => flow.appendChild(createStep('is-parent', 'Parent', p, true)));
-      flow.appendChild(createStep('is-focus', 'Current Part', node, false));
+      
+      // 1. INPUTS
       if (inputs.length > 0) {
-        inputs.forEach(inp => flow.appendChild(createStep('is-child', 'Input', inp, true)));
+        inputs.forEach(inp => flow.appendChild(createStep('is-child', 'Input (Start)', inp, true)));
       } else {
         const empty = document.createElement('div');
         empty.className = 'flow-step is-child';
-        empty.innerHTML = `<div class="step-label">No sub-components</div>`;
+        empty.innerHTML = `<div class="step-label">No sub-components (Start)</div>`;
         flow.appendChild(empty);
       }
+
+      // 2. FOCUS
+      flow.appendChild(createStep('is-focus', 'Current Part', node, false));
+
+      // 3. PARENTS
+      // We iterate normal order to go upwards: Immediate Parent -> Grandparent
+      if (parents.length > 0) {
+        parents.forEach(p => flow.appendChild(createStep('is-parent', 'Used In (Next)', p, true)));
+      } else {
+         const end = document.createElement('div');
+         end.className = 'flow-step is-parent';
+         end.innerHTML = `<div class="step-label">End of Line (Top Assembly)</div>`;
+         flow.appendChild(end);
+      }
+      
       grid.appendChild(flow);
 
       // --- Right Column: Mermaid Diagram (Visual) ---
+      // NEW LOGIC: Input -> Focus -> Parent
       const vizDiv = document.createElement('div');
       vizDiv.className = 'visual-container';
-      vizDiv.innerHTML = `<div class="viz-title">Visual Process Map</div>`;
+      vizDiv.innerHTML = `<div class="viz-title">Visual Process Map (Input → Output)</div>`;
       
       const chartId = `mermaid-${Date.now()}-${idx}`;
       const chartDiv = document.createElement('div');
@@ -606,7 +624,6 @@
       resultsContainer.appendChild(card);
 
       // GENERATE DIAGRAM
-      // Sanitize ID for Mermaid (remove spaces/dashes)
       const safeId = (str) => str.replace(/[^a-zA-Z0-9]/g, '_');
       
       let graph = `graph LR\n`;
@@ -619,35 +636,25 @@
       const fId = "F_" + safeId(node.part);
       graph += `${fId}["${node.part}"]:::focus\n`;
 
-      // Connect Parents
-      let prevId = null;
-      // We want Highest -> Lower -> Lowest Parent
-      [...parents].reverse().forEach((p, i) => {
-        const pId = "P_" + i + "_" + safeId(p.part);
-        graph += `${pId}["${p.part}"]:::parent\n`;
-        if (i === 0) {
-           // First parent is standalone start? 
-           // Or just link them in chain
-        }
-        if (prevId) {
-          graph += `${prevId} --> ${pId}\n`;
-        }
-        prevId = pId;
-      });
-      // Last parent connects to Focus
-      if (prevId) graph += `${prevId} --> ${fId}\n`;
-
-      // Connect Inputs
+      // 1. Connect Inputs --> Focus
       if (inputs.length > 0) {
         inputs.forEach((inp, i) => {
            const iId = "I_" + i + "_" + safeId(inp.part);
-           // Limit label length
            let lbl = inp.part;
            if(inp.category) lbl += "<br/>(" + friendlyCat(inp.category) + ")";
            graph += `${iId}["${lbl}"]:::input\n`;
-           graph += `${fId} --> ${iId}\n`;
+           graph += `${iId} --> ${fId}\n`; // Input points to Focus
         });
       }
+
+      // 2. Connect Focus --> Parents
+      let prevId = fId;
+      parents.forEach((p, i) => {
+        const pId = "P_" + i + "_" + safeId(p.part);
+        graph += `${pId}["${p.part}"]:::parent\n`;
+        graph += `${prevId} --> ${pId}\n`; // Focus points to Parent, then Parent points to Grandparent
+        prevId = pId;
+      });
 
       // Render the diagram
       try {
