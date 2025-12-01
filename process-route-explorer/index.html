@@ -2,160 +2,180 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Process Route Explorer (Multi-Sheet)</title>
+  <title>Process Route Explorer v3</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- XLSX.js for reading Excel in the browser -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    /* === BASE THEME === */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       min-height: 100vh;
       color: #e5e7ff;
+      /* Deep space background */
       background: radial-gradient(circle at top, #1d1b3a 0%, #050816 40%, #02010a 100%);
       overflow-x: hidden;
     }
 
-    /* Futuristic background blobs */
+    /* Ambient Blobs */
     .bg-blob {
       position: fixed;
       width: 420px;
       height: 420px;
       border-radius: 50%;
-      filter: blur(70px);
-      opacity: 0.4;
+      filter: blur(80px);
+      opacity: 0.35;
       z-index: 0;
       pointer-events: none;
     }
-
-    .bg-blob.blob-1 {
-      top: -120px;
-      left: -80px;
-      background: #7f5af0;
-    }
-
-    .bg-blob.blob-2 {
-      bottom: -160px;
-      right: -100px;
-      background: #2cb67d;
-    }
+    .blob-1 { top: -120px; left: -80px; background: #7f5af0; }
+    .blob-2 { bottom: -160px; right: -100px; background: #2cb67d; }
 
     .app-shell {
       position: relative;
       z-index: 1;
-      max-width: 1100px;
-      margin: 24px auto 40px;
+      max-width: 1000px;
+      margin: 24px auto 60px;
       padding: 16px;
     }
 
-    header {
-      margin-bottom: 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
+    /* === HEADER === */
+    header { margin-bottom: 24px; }
     .app-title {
-      font-size: 1.6rem;
-      font-weight: 700;
-      letter-spacing: 0.06em;
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
       text-transform: uppercase;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
-
-    .app-title span.glow-dot {
-      width: 10px;
-      height: 10px;
+    .glow-dot {
+      width: 12px;
+      height: 12px;
       border-radius: 50%;
       background: #2cb67d;
-      box-shadow: 0 0 12px #2cb67d;
+      box-shadow: 0 0 15px #2cb67d;
     }
-
     .app-subtitle {
-      font-size: 0.9rem;
+      margin-top: 8px;
+      font-size: 0.95rem;
       color: #9ca3ff;
-      max-width: 640px;
+      max-width: 600px;
+      line-height: 1.4;
     }
 
+    /* === GLASS PANELS === */
     .glass-panel {
-      background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.85));
-      border-radius: 18px;
-      border: 1px solid rgba(148, 163, 255, 0.25);
-      box-shadow:
-        0 0 0 1px rgba(15, 23, 42, 0.8),
-        0 22px 45px rgba(15, 23, 42, 0.9);
-      padding: 18px 18px 22px;
-      margin-bottom: 16px;
+      background: linear-gradient(145deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 255, 0.15);
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+      padding: 20px;
+      margin-bottom: 20px;
     }
 
     .panel-header {
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       text-transform: uppercase;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.12em;
       color: #a5b4fc;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
+      font-weight: 700;
     }
 
-    .upload-row,
-    .search-row {
+    /* === CONTROLS === */
+    .control-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
     }
 
+    /* Custom File Input */
     .file-label {
-      position: relative;
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 8px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(129, 140, 248, 0.6);
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(129, 140, 248, 0.4);
+      background: rgba(30, 41, 59, 0.6);
       cursor: pointer;
       font-size: 0.9rem;
-      background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.35), rgba(15, 23, 42, 0.98));
-      transition: all 0.16s ease-out;
-      white-space: nowrap;
+      transition: all 0.2s;
     }
+    .file-label:hover { border-color: #7f5af0; color: #fff; }
+    .file-label input { display: none; }
 
-    .file-label:hover {
+    /* Text Input */
+    input[type="text"] {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(148, 163, 255, 0.3);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 1rem;
+      color: #fff;
+      flex: 1;
+      min-width: 200px;
+    }
+    input[type="text"]:focus {
+      outline: none;
       border-color: #7f5af0;
-      box-shadow: 0 0 12px rgba(127, 90, 240, 0.6);
-      transform: translateY(-1px);
+      box-shadow: 0 0 0 2px rgba(127, 90, 240, 0.2);
     }
 
-    .file-label input[type="file"] {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
+    /* Action Button */
+    .action-btn {
+      background: linear-gradient(135deg, #7f5af0, #6246ea);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+    .action-btn:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(127, 90, 240, 0.4);
+    }
+    .action-btn:disabled {
+      background: #334155;
+      color: #94a3b8;
+      cursor: not-allowed;
+    }
+
+    /* === SHEET SELECTOR (CHIPS) === */
+    .sheet-area {
+      margin-top: 16px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .sheet-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .mini-btn {
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      background: transparent;
+      border: 1px solid rgba(148, 163, 255, 0.3);
+      color: #a5b4fc;
+      border-radius: 4px;
       cursor: pointer;
     }
-
-    /* === NEW SHEET SELECTOR STYLES === */
-    .sheet-selection-area {
-      width: 100%;
-      margin-top: 12px;
-      margin-bottom: 8px;
-      padding: 10px;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 12px;
-      border: 1px solid rgba(148, 163, 255, 0.1);
-    }
-
-    .sheet-controls {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 10px;
-    }
+    .mini-btn:hover { background: rgba(148, 163, 255, 0.1); color: white; }
 
     .sheet-grid {
       display: flex;
@@ -163,324 +183,172 @@
       gap: 8px;
       max-height: 200px;
       overflow-y: auto;
-      padding-right: 4px;
     }
-
-    /* Scrollbar styling for sheet list */
-    .sheet-grid::-webkit-scrollbar {
-      width: 6px;
-    }
-    .sheet-grid::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 3px;
-    }
-    .sheet-grid::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 255, 0.3);
-      border-radius: 3px;
-    }
-
     .sheet-chip {
-      padding: 6px 14px;
-      border-radius: 8px;
-      border: 1px solid rgba(148, 163, 255, 0.2);
-      background: rgba(30, 41, 59, 0.6);
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: #1e293b;
+      border: 1px solid #334155;
       color: #94a3b8;
+      font-size: 0.8rem;
       cursor: pointer;
-      font-size: 0.85rem;
-      transition: all 0.2s ease;
       user-select: none;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      transition: all 0.15s;
     }
-
-    .sheet-chip:hover {
-      border-color: #a5b4fc;
-      color: #e2e8f0;
-      background: rgba(30, 41, 59, 0.9);
-    }
-
-    /* Active State (Green Glow) */
+    .sheet-chip:hover { border-color: #64748b; color: #e2e8f0; }
+    
+    /* Selected State */
     .sheet-chip.active {
-      background: rgba(16, 185, 129, 0.15);
+      background: rgba(44, 182, 125, 0.15);
       border-color: #2cb67d;
       color: #2cb67d;
       font-weight: 600;
-      box-shadow: 0 0 10px rgba(44, 182, 125, 0.2);
-    }
-    
-    .sheet-chip.active::before {
-      content: "✓";
-      font-weight: bold;
+      box-shadow: 0 0 8px rgba(44, 182, 125, 0.15);
     }
 
-    .mini-btn {
-      background: transparent;
-      border: 1px solid rgba(148, 163, 255, 0.3);
-      color: #a5b4fc;
-      padding: 4px 10px;
-      font-size: 0.75rem;
-      border-radius: 6px;
-      cursor: pointer;
-      box-shadow: none;
-    }
-    .mini-btn:hover:not(:disabled) {
-      background: rgba(148, 163, 255, 0.1);
-      border-color: #a5b4fc;
-      transform: none;
-      box-shadow: none;
-    }
-    /* ================================= */
-
-    .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border-radius: 999px;
-      padding: 4px 10px;
-      font-size: 0.8rem;
-      border: 1px solid rgba(148, 163, 255, 0.4);
-      color: #c7d2fe;
-      background: rgba(15, 23, 42, 0.8);
-      min-height: 28px;
-      margin-left: auto; /* Push to right */
-    }
-
-    select,
-    input[type="text"] {
-      background: rgba(15, 23, 42, 0.96);
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 255, 0.55);
-      padding: 7px 14px;
-      font-size: 0.9rem;
-      color: #e5e7ff;
-      outline: none;
-      min-width: 140px;
-      max-width: 100%;
-    }
-
-    select:focus,
-    input[type="text"]:focus {
-      box-shadow: 0 0 0 1px #7f5af0, 0 0 12px rgba(127, 90, 240, 0.9);
-      border-color: #7f5af0;
-    }
-
-    /* Main Action Button */
-    .action-btn {
-      border-radius: 999px;
-      border: 1px solid rgba(127, 90, 240, 0.8);
-      background: radial-gradient(circle at top left, #7f5af0, #4338ca);
-      color: #f9fafb;
-      padding: 7px 16px;
-      font-size: 0.9rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow:
-        0 12px 25px rgba(15, 23, 42, 0.9),
-        0 0 12px rgba(127, 90, 240, 0.7);
-      transition: transform 0.16s ease-out, box-shadow 0.16s ease-out, opacity 0.16s ease-out;
-    }
-
-    .action-btn:disabled {
-      opacity: 0.4;
-      cursor: default;
-      box-shadow: none;
-      filter: grayscale(0.8);
-    }
-
-    .action-btn:not(:disabled):hover {
-      transform: translateY(-1px);
-      box-shadow:
-        0 18px 35px rgba(15, 23, 42, 1),
-        0 0 18px rgba(129, 140, 248, 0.8);
-    }
-
-    .status-line {
-      margin-top: 8px;
-      font-size: 0.82rem;
-      color: #9ca3ff;
-    }
-
-    .status-line strong {
-      color: #e5e7ff;
-    }
-
-    .search-row input[type="text"] {
-      flex: 1 1 220px;
-      font-size: 1rem;
-    }
-
-    .search-row button {
-      flex: 0 0 auto;
-    }
-
-    /* Results */
-    #resultPanel {
-      margin-top: 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
+    /* === RESULTS: METRO MAP === */
     .route-card {
-      border-radius: 18px;
-      padding: 14px 14px 16px;
-      background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.18), rgba(15, 23, 42, 0.98));
-      border: 1px solid rgba(148, 163, 255, 0.45);
-      box-shadow:
-        0 14px 30px rgba(15, 23, 42, 0.95),
-        0 0 18px rgba(37, 99, 235, 0.65);
-      position: relative;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(148, 163, 255, 0.2);
+      border-radius: 12px;
+      margin-bottom: 24px;
       overflow: hidden;
     }
-
-    .route-card::before {
-      content: "";
-      position: absolute;
-      inset: -1px;
-      border-radius: inherit;
-      border: 1px solid transparent;
-      background:
-        linear-gradient(120deg, rgba(56, 189, 248, 0.3), rgba(59, 130, 246, 0.1), rgba(236, 72, 153, 0.3))
-        border-box;
-      mask:
-        linear-gradient(#000 0 0) padding-box,
-        linear-gradient(#000 0 0);
-      mask-composite: exclude;
-      opacity: 0.25;
-      pointer-events: none;
-    }
-
+    
     .route-header {
+      background: rgba(30, 41, 59, 0.5);
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       display: flex;
       justify-content: space-between;
-      align-items: baseline;
-      gap: 8px;
-      margin-bottom: 4px;
-    }
-
-    .route-part {
-      font-size: 1.15rem;
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-    }
-
-    .route-part span.badge {
-      margin-left: 8px;
-      font-size: 0.7rem;
-      padding: 2px 6px;
-      border-radius: 999px;
-      border: 1px solid rgba(96, 165, 250, 0.7);
-      color: #bfdbfe;
-      text-transform: none;
-    }
-
-    .route-asm {
-      font-size: 0.78rem;
-      color: #a5b4fc;
-      text-align: right;
-      max-width: 55%;
-    }
-
-    .route-meta {
-      margin-top: 4px;
-      font-size: 0.78rem;
-      color: #cbd5ff;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-    }
-
-    .meta-pill {
-      padding: 3px 9px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 255, 0.45);
-      background: rgba(15, 23, 42, 0.9);
-      display: inline-flex;
-      gap: 4px;
       align-items: center;
     }
-
-    .meta-label {
+    .route-title {
+      font-size: 0.9rem;
+      color: #94a3b8;
       font-weight: 600;
-      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.09em;
-      color: #a5b4fc;
     }
 
-    .timeline {
-      margin-top: 10px;
-      border-left: 1px dashed rgba(148, 163, 255, 0.5);
-      padding-left: 14px;
+    /* The Flow Container */
+    .flow-container {
+      padding: 20px 20px 20px 30px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
     }
 
-    .timeline-step {
-      display: flex;
-      align-items: flex-start;
-      gap: 8px;
+    .flow-step {
+      position: relative;
+      padding-left: 24px; /* Space for the line */
+      padding-bottom: 24px;
+      border-left: 2px solid rgba(148, 163, 255, 0.2);
+    }
+    .flow-step:last-child {
+      border-left-color: transparent;
+      padding-bottom: 0;
     }
 
-    .step-index {
-      width: 20px;
-      height: 20px;
-      border-radius: 999px;
-      border: 1px solid rgba(129, 140, 248, 0.8);
-      background: radial-gradient(circle at top, rgba(79, 70, 229, 0.9), rgba(15, 23, 42, 1));
+    /* The Dot */
+    .flow-step::before {
+      content: "";
+      position: absolute;
+      left: -6px; /* Center on 2px border */
+      top: 2px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #0f172a;
+      border: 2px solid #64748b;
+      z-index: 2;
+    }
+
+    /* Connection Variations */
+    .flow-step.is-parent::before { border-color: #2cb67d; background: #2cb67d; }
+    .flow-step.is-focus::before { 
+      border-color: #7f5af0; 
+      background: #7f5af0; 
+      width: 14px; height: 14px; 
+      left: -8px; 
+    }
+    .flow-step.is-child::before { border-color: #94a3b8; }
+
+    /* The Card Content inside the step */
+    .step-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: #64748b;
+      margin-bottom: 6px;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+    }
+
+    .step-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      transition: all 0.2s;
+    }
+
+    /* Focus Card (The middle one) */
+    .step-card.focus-card {
+      background: linear-gradient(135deg, rgba(127, 90, 240, 0.1), rgba(15, 23, 42, 0.8));
+      border-color: #7f5af0;
+      box-shadow: 0 0 15px rgba(127, 90, 240, 0.15);
+    }
+
+    /* Typography inside cards */
+    .part-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .part-desc {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      margin-top: 4px;
+    }
+    .part-meta {
+      margin-top: 8px;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .meta-tag {
       font-size: 0.75rem;
-      font-weight: 600;
-      box-shadow: 0 0 10px rgba(129, 140, 248, 0.8);
-      flex-shrink: 0;
-      margin-top: 2px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #94a3b8;
     }
 
-    .step-text {
+    /* Clickable Link Styling */
+    .clickable-part {
+      color: #2cb67d;
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
+    .clickable-part:hover {
+      color: #4ade80;
+      text-decoration-style: solid;
+    }
+
+    .status-msg {
+      margin-top: 8px;
       font-size: 0.85rem;
-      color: #e5e7ff;
+      color: #94a3b8;
     }
+    .status-msg strong { color: #e2e8f0; }
+    .error-msg { color: #f87171; }
 
-    .no-result {
-      font-size: 0.86rem;
-      color: #fbbf24;
-    }
-
-    @media (max-width: 720px) {
-      .app-shell {
-        padding: 10px;
-        margin-top: 14px;
-      }
-
-      .glass-panel {
-        padding: 14px 12px 16px;
-      }
-
-      .route-card {
-        padding: 12px 10px 14px;
-      }
-
-      .route-header {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      .route-asm {
-        max-width: 100%;
-      }
-    }
   </style>
 </head>
 <body>
+
   <div class="bg-blob blob-1"></div>
   <div class="bg-blob blob-2"></div>
 
@@ -488,568 +356,393 @@
     <header>
       <div class="app-title">
         <span class="glow-dot"></span>
-        PROCESS ROUTE EXPLORER
+        Process Route Explorer
       </div>
       <div class="app-subtitle">
-        Upload your MBOM Excel, select relevant sheets (Mech, Elec, etc.), and search for a part number to trace its route.
+        MTM Production Engineering Tool. Load your MBOM, select relevant sheets (Mech/Elec), 
+        and trace parts from raw materials up to parent assemblies.
       </div>
     </header>
 
+    <!-- 1. LOAD FILE -->
     <div class="glass-panel">
-      <div class="panel-header">1 · Load MBOM</div>
-      <div class="upload-row">
+      <div class="panel-header">1. Load Data</div>
+      <div class="control-row">
         <label class="file-label">
-          <span class="icon">📂</span>
-          <span>Choose Excel file (.xlsx)</span>
-          <input id="fileInput" type="file" accept=".xlsx,.xls" />
+          <span>📂 Select Excel File</span>
+          <input type="file" id="fileInput" accept=".xlsx, .xls">
         </label>
-
-        <button id="loadSheetBtn" class="action-btn" disabled>
-          <span class="icon">⚙️</span>
-          <span>Parse Selected Sheets</span>
+        <button id="parseBtn" class="action-btn" disabled>
+          <span>⚙️ Parse Selected Sheets</span>
         </button>
-
-        <div id="fileStatus" class="chip">
-          <span class="meta-label">Status</span>
-          <span id="fileStatusText">No file loaded</span>
-        </div>
-      </div>
-      
-      <div class="sheet-selection-area" id="sheetArea" style="display:none;">
-        <div class="sheet-controls">
-          <span class="meta-label">Select Sheets:</span>
-          <button id="selectAllBtn" class="mini-btn">All</button>
-          <button id="selectNoneBtn" class="mini-btn">None</button>
-        </div>
-        <div id="sheetListContainer" class="sheet-grid">
-          </div>
       </div>
 
-      <div id="sheetStatus" class="status-line"></div>
+      <!-- Sheet Selection Grid -->
+      <div id="sheetArea" class="sheet-area" style="display:none;">
+        <div class="sheet-actions">
+          <span style="font-size:0.8rem; color:#94a3b8;">Select Sheets to Scan:</span>
+          <button id="btnAll" class="mini-btn">Select All</button>
+          <button id="btnNone" class="mini-btn">Select None</button>
+        </div>
+        <div id="sheetGrid" class="sheet-grid"></div>
+      </div>
+
+      <div id="statusLoad" class="status-msg"></div>
     </div>
 
+    <!-- 2. SEARCH -->
     <div class="glass-panel">
-      <div class="panel-header">2 · Trace a part</div>
-      <div class="search-row">
-        <input
-          id="partInput"
-          type="text"
-          placeholder="Enter part number, e.g. A-43679"
-          disabled
-        />
+      <div class="panel-header">2. Trace Part</div>
+      <div class="control-row">
+        <input type="text" id="partInput" placeholder="Enter Part Number (e.g. A-12345)" disabled>
         <button id="searchBtn" class="action-btn" disabled>
-          <span class="icon">🔍</span>
-          <span>Trace process</span>
+          <span>🔍 Trace Path</span>
         </button>
       </div>
-      <div class="status-line">
-        Tip: this tool expects sheets with headers like <strong>ASSEMBLY NO</strong>,
-        <strong>Part #</strong>, <strong>Category</strong>, etc.
+      <div class="status-msg">
+        Tip: Click on any <strong>Parent</strong> or <strong>Input</strong> in the results to jump to that part immediately.
       </div>
     </div>
 
-    <div class="glass-panel">
-      <div class="panel-header">3 · Result</div>
-      <div id="resultPanel"></div>
-    </div>
+    <!-- 3. RESULTS -->
+    <div id="resultsContainer"></div>
   </div>
 
   <script>
-    // ===== Internal data structures =====
+    // === GLOBAL STATE ===
     let workbook = null;
-    let nodes = [];                // all rows as Node objects
-    let rowsByPart = {};           // partKey (upper) -> [Node]
-    let nodeIndex = {};            // assemblyNo|item -> Node
+    let nodes = [];       // Flat list of all rows
+    let rowsByPart = {};  // Map: PartNumber -> [Node, Node]
+    let nodeIndex = {};   // Map: Assembly|Item -> Node (for tree climbing)
 
-    const fileInput = document.getElementById("fileInput");
-    const loadSheetBtn = document.getElementById("loadSheetBtn");
-    const fileStatusText = document.getElementById("fileStatusText");
-    const sheetStatus = document.getElementById("sheetStatus");
-    const partInput = document.getElementById("partInput");
-    const searchBtn = document.getElementById("searchBtn");
-    const resultPanel = document.getElementById("resultPanel");
+    // DOM Elements
+    const fileInput = document.getElementById('fileInput');
+    const parseBtn = document.getElementById('parseBtn');
+    const sheetArea = document.getElementById('sheetArea');
+    const sheetGrid = document.getElementById('sheetGrid');
+    const btnAll = document.getElementById('btnAll');
+    const btnNone = document.getElementById('btnNone');
+    const statusLoad = document.getElementById('statusLoad');
     
-    // Sheet UI elements
-    const sheetArea = document.getElementById("sheetArea");
-    const sheetListContainer = document.getElementById("sheetListContainer");
-    const selectAllBtn = document.getElementById("selectAllBtn");
-    const selectNoneBtn = document.getElementById("selectNoneBtn");
+    const partInput = document.getElementById('partInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resultsContainer = document.getElementById('resultsContainer');
 
-    // ===== Helpers =====
-    function friendlyCategory(cat) {
-      if (!cat) return "unspecified type";
-      const c = String(cat).toUpperCase();
-      const map = {
-        RAW: "raw material",
-        LASER: "laser-cut blank",
-        WJET: "waterjet-cut blank",
-        MACH: "machined part",
-        WELD: "welded fabrication",
-        ASSM: "assembly",
-        FASTN: "fastener",
-        PURCH: "purchased part",
-        PTRAIN: "power-train item",
-        ELEC: "electrical component"
-      };
-      return map[c] || c;
-    }
+    // === 1. FILE LOADING ===
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-    function parentItemCode(item) {
-      if (!item) return null;
-      const s = String(item);
-      if (!s.includes(".")) return null;
-      const parts = s.split(".");
-      parts.pop();
-      return parts.join(".");
-    }
-
-    function findInputsForNode(node) {
-      if (!node.item || !node.assemblyNo) return [];
-      const prefix = node.item + ".";
-      const acc = [];
-      for (const n of nodes) {
-        if (!n.item || !n.assemblyNo) continue;
-        if (n.assemblyNo !== node.assemblyNo) continue;
-        if (!String(n.item).startsWith(prefix)) continue;
-        if (n.part === node.part && n.item === node.item) continue;
-        
-        // Include common process inputs
-        const cat = (n.category || "").toUpperCase();
-        if (["RAW", "LASER", "WJET", "MACH", "WELD", "PTRAIN", "FASTN", "PURCH", "CAST", "ELEC"].includes(cat)) {
-          acc.push(n);
-        }
-      }
-      return acc;
-    }
-
-    function buildChain(node) {
-      const chain = {
-        self: node,
-        inputs: findInputsForNode(node),
-        parents: [],
-        topAssemblyNo: node.assemblyNo || null,
-        topAssemblyDesc: node.assemblyDescription || null
-      };
-
-      // Climb up via Item codes inside the same assembly
-      let current = node;
-      while (current && current.item && current.assemblyNo) {
-        const parentItem = parentItemCode(current.item);
-        if (!parentItem) break;
-        const key = current.assemblyNo + "|" + parentItem;
-        const parentNode = nodeIndex[key];
-        if (!parentNode) break;
-        chain.parents.push(parentNode);
-        current = parentNode;
-      }
-      return chain;
-    }
-
-    function summarizeChain(chain) {
-      const n = chain.self;
-      const inputs = chain.inputs || [];
-      const parents = chain.parents || [];
-      const asmNo = chain.topAssemblyNo;
-      const asmDesc = chain.topAssemblyDesc;
-
-      const sentences = [];
-
-      // Main sentence
-      let base = `Part ${n.part} is a ${friendlyCategory(n.category)}`;
-      if (n.description) {
-        base += ` (${n.description})`;
-      }
-      if (n.location) {
-        base += ` located at ${n.location}`;
-      }
-      if (n.secondaryProcess) {
-        base += ` with secondary process: ${n.secondaryProcess}`;
-      }
-      base += ".";
-      sentences.push(base);
-
-      // Inputs / blanks
-      if (inputs.length) {
-        const parts = inputs.map(inp => {
-          let t = `${inp.part} (${friendlyCategory(inp.category)}`;
-          if (inp.description) {
-            t += ` – ${inp.description}`;
-          }
-          t += ")";
-          return t;
-        });
-        sentences.push("It is built from: " + parts.join(", ") + ".");
-      }
-
-      // Parents in the tree (subassemblies)
-      for (const p of parents) {
-        let line = `Then it is used inside part ${p.part || "(no part #)"}`;
-        line += ` (${friendlyCategory(p.category)}`;
-        if (p.description) {
-          line += ` – ${p.description}`;
-        }
-        line += ").";
-        sentences.push(line);
-      }
-
-      // Main assembly
-      if (asmNo) {
-        let tail = `All of this is under main assembly ${asmNo}`;
-        if (asmDesc) {
-          tail += ` – ${asmDesc}`;
-        }
-        tail += ".";
-        sentences.push(tail);
-      }
-
-      return sentences;
-    }
-
-    function clearResults() {
-      resultPanel.innerHTML = "";
-    }
-
-    function renderNoResult(message) {
-      clearResults();
-      const p = document.createElement("div");
-      p.className = "no-result";
-      p.textContent = message;
-      resultPanel.appendChild(p);
-    }
-
-    function renderChains(partKey, chains) {
-      clearResults();
-
-      chains.forEach((chain, idx) => {
-        const node = chain.self;
-        const sentences = summarizeChain(chain);
-
-        const card = document.createElement("div");
-        card.className = "route-card";
-
-        const header = document.createElement("div");
-        header.className = "route-header";
-
-        const title = document.createElement("div");
-        title.className = "route-part";
-        title.textContent = node.part || "(no part #)";
-
-        const badge = document.createElement("span");
-        badge.className = "badge";
-        badge.textContent = `Occurrence ${idx + 1}`;
-        title.appendChild(badge);
-
-        const asm = document.createElement("div");
-        asm.className = "route-asm";
-        if (node.assemblyNo) {
-          let t = node.assemblyNo;
-          if (node.assemblyDescription) {
-            t += " — " + node.assemblyDescription;
-          }
-          asm.textContent = t;
-        } else {
-          asm.textContent = "No main assembly detected";
-        }
-
-        header.appendChild(title);
-        header.appendChild(asm);
-        card.appendChild(header);
-
-        // Meta pills row
-        const metaRow = document.createElement("div");
-        metaRow.className = "route-meta";
-
-        const catPill = document.createElement("div");
-        catPill.className = "meta-pill";
-        catPill.innerHTML = `<span class="meta-label">Category</span><span>${friendlyCategory(node.category)}</span>`;
-        metaRow.appendChild(catPill);
-
-        if (node.location) {
-          const locPill = document.createElement("div");
-          locPill.className = "meta-pill";
-          locPill.innerHTML = `<span class="meta-label">Location</span><span>${node.location}</span>`;
-          metaRow.appendChild(locPill);
-        }
-
-        if (node.secondaryProcess) {
-          const secPill = document.createElement("div");
-          secPill.className = "meta-pill";
-          secPill.innerHTML = `<span class="meta-label">Secondary</span><span>${node.secondaryProcess}</span>`;
-          metaRow.appendChild(secPill);
-        }
-        
-        // Show Source Sheet
-        const sheetPill = document.createElement("div");
-        sheetPill.className = "meta-pill";
-        sheetPill.innerHTML = `<span class="meta-label">Sheet</span><span>${node.sourceSheet || "N/A"}</span>`;
-        metaRow.appendChild(sheetPill);
-
-        card.appendChild(metaRow);
-
-        // Timeline
-        const timeline = document.createElement("div");
-        timeline.className = "timeline";
-
-        sentences.forEach((sentence, idx2) => {
-          const trimmed = sentence.trim();
-          if (!trimmed) return;
-
-          const step = document.createElement("div");
-          step.className = "timeline-step";
-
-          const idxDot = document.createElement("div");
-          idxDot.className = "step-index";
-          idxDot.textContent = idx2 + 1;
-
-          const text = document.createElement("div");
-          text.className = "step-text";
-          text.textContent = trimmed;
-
-          step.appendChild(idxDot);
-          step.appendChild(text);
-          timeline.appendChild(step);
-        });
-
-        card.appendChild(timeline);
-        resultPanel.appendChild(card);
-      });
-    }
-
-    // ===== File handling =====
-    fileInput.addEventListener("change", event => {
-      const file = event.target.files[0];
-      clearResults();
-
-      if (!file) {
-        workbook = null;
-        sheetListContainer.innerHTML = "";
-        sheetArea.style.display = 'none';
-        loadSheetBtn.disabled = true;
-        partInput.disabled = true;
-        searchBtn.disabled = true;
-        fileStatusText.textContent = "No file loaded";
-        sheetStatus.textContent = "";
-        return;
-      }
-
-      fileStatusText.textContent = `Loading: ${file.name}…`;
-      sheetStatus.textContent = "Reading workbook…";
-
+      statusLoad.innerHTML = "Reading file... please wait.";
       const reader = new FileReader();
-      reader.onload = function (e) {
-        const data = new Uint8Array(e.target.result);
+      
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
         try {
-          workbook = XLSX.read(data, { type: "array" });
+          workbook = XLSX.read(data, {type: 'array'});
+          renderSheetSelector(workbook.SheetNames);
+          statusLoad.innerHTML = `Loaded <strong>${file.name}</strong>. Select sheets below.`;
+          parseBtn.disabled = false;
         } catch (err) {
           console.error(err);
-          workbook = null;
-          fileStatusText.textContent = "Error reading Excel file";
-          sheetStatus.textContent = "Make sure it's a valid .xlsx.";
-          return;
+          statusLoad.innerHTML = `<span class="error-msg">Error reading file. Ensure it is a valid Excel file.</span>`;
         }
-
-        // GENERATE CHIP GRID
-        sheetListContainer.innerHTML = "";
-        sheetArea.style.display = 'block';
-
-        workbook.SheetNames.forEach(name => {
-          const chip = document.createElement("div");
-          chip.className = "sheet-chip";
-          chip.textContent = name;
-          chip.dataset.sheetname = name;
-          
-          // Click to toggle
-          chip.addEventListener("click", () => {
-             chip.classList.toggle("active");
-          });
-
-          // Optional: Auto-select if it looks like a main mechanical or electrical sheet
-          const up = name.toUpperCase();
-          if (up.includes("MECH") || up.includes("BOM") || up.includes("LIST")) {
-             chip.classList.add("active");
-          }
-
-          sheetListContainer.appendChild(chip);
-        });
-
-        loadSheetBtn.disabled = false;
-        fileStatusText.textContent = `Loaded: ${file.name}`;
-        sheetStatus.textContent = `Found ${workbook.SheetNames.length} sheets. Select the ones you want to include, then click "Parse".`;
       };
       reader.readAsArrayBuffer(file);
     });
-    
-    // Select All / None Helpers
-    selectAllBtn.addEventListener("click", () => {
-        const chips = document.querySelectorAll(".sheet-chip");
-        chips.forEach(c => c.classList.add("active"));
-    });
-    
-    selectNoneBtn.addEventListener("click", () => {
-        const chips = document.querySelectorAll(".sheet-chip");
-        chips.forEach(c => c.classList.remove("active"));
-    });
 
-    // ===== Parse Logic (Multi-Sheet) =====
-    loadSheetBtn.addEventListener("click", () => {
-      if (!workbook) return;
+    function renderSheetSelector(names) {
+      sheetArea.style.display = 'block';
+      sheetGrid.innerHTML = '';
+      
+      names.forEach(name => {
+        const chip = document.createElement('div');
+        chip.className = 'sheet-chip';
+        chip.textContent = name;
+        chip.dataset.name = name;
+        
+        // Auto-select likely candidates (Mech, BOM, List)
+        const up = name.toUpperCase();
+        if (up.includes('MECH') || up.includes('BOM') || up.includes('LIST') || !up.includes('LOG')) {
+          chip.classList.add('active');
+        }
+        
+        chip.onclick = () => chip.classList.toggle('active');
+        sheetGrid.appendChild(chip);
+      });
+    }
 
-      const activeChips = document.querySelectorAll(".sheet-chip.active");
+    btnAll.onclick = () => document.querySelectorAll('.sheet-chip').forEach(c => c.classList.add('active'));
+    btnNone.onclick = () => document.querySelectorAll('.sheet-chip').forEach(c => c.classList.remove('active'));
+
+    // === 2. PARSING (THE HEAVY LIFTING) ===
+    parseBtn.addEventListener('click', () => {
+      const activeChips = document.querySelectorAll('.sheet-chip.active');
       if (activeChips.length === 0) {
-        sheetStatus.innerHTML = "<span style='color:#fbbf24'>Please select at least one sheet above.</span>";
+        alert("Please select at least one sheet.");
         return;
       }
 
-      sheetStatus.textContent = "Parsing selected sheets…";
-      clearResults();
-
-      // RESET GLOBAL DATA
+      statusLoad.innerHTML = "Parsing sheets... this may take a moment.";
+      
+      // Reset Data
       nodes = [];
       rowsByPart = {};
       nodeIndex = {};
-      
-      let totalParsedRows = 0;
-      let sheetsParsedCount = 0;
 
-      // Iterate over every selected sheet
-      activeChips.forEach(chip => {
-          const sheetName = chip.dataset.sheetname;
+      setTimeout(() => {
+        let count = 0;
+        
+        activeChips.forEach(chip => {
+          const sheetName = chip.dataset.name;
           const ws = workbook.Sheets[sheetName];
-          if(!ws) return;
+          if (!ws) return;
 
-          // 1. Read rows
-          const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-          if (!rows.length) return;
+          const rows = XLSX.utils.sheet_to_json(ws, {header: 1, defval: null});
+          if (!rows || rows.length < 2) return;
 
-          // 2. Dynamic Header Search (per sheet)
-          let headerIndex = -1;
-          for (let i = 0; i < Math.min(20, rows.length); i++) {
-            const row = rows[i] || [];
-            // Looser check: needs Part # and Category at minimum to be useful
-            if (row.includes("Part #") && row.includes("Category")) {
-              headerIndex = i;
+          // Find Header Row dynamically
+          let headerIdx = -1;
+          for(let i=0; i<Math.min(20, rows.length); i++) {
+            const r = rows[i] || [];
+            // We look for 'Part #' and 'Category' as anchors
+            if (r.includes('Part #') && r.includes('Category')) {
+              headerIdx = i;
               break;
             }
           }
 
-          if (headerIndex === -1) {
-             console.warn(`Skipping sheet ${sheetName}: Could not find headers.`);
-             return; // Skip this sheet
-          }
+          if (headerIdx === -1) return; // Skip sheets that don't look like BOMs
 
-          // 3. Map columns
-          const header = rows[headerIndex];
-          const colIndex = {};
-          header.forEach((name, idx) => {
-            if (name) colIndex[name] = idx;
-          });
+          // Map columns
+          const header = rows[headerIdx];
+          const colMap = {};
+          header.forEach((h, idx) => { if(h) colMap[h.trim()] = idx; });
 
-          function idx(name) { return colIndex.hasOwnProperty(name) ? colIndex[name] : -1; }
-          
-          const idxAsm = idx("ASSEMBLY NO");
-          const idxItem = idx("Item");
-          const idxPart = idx("Part #");
-          const idxCat = idx("Category");
-          const idxDesc = idx("Description");
-          const idxGroup = idx("Group");
-          const idxSec = idx("Secondary process");
-          const idxLoc = idx("Part Location/Process");
+          const getVal = (row, name) => {
+             const idx = colMap[name];
+             return (idx !== undefined && row[idx]) ? String(row[idx]).trim() : null;
+          };
 
-          // 4. Extract Data
-          let currentAssembly = null;
-          let currentAsmDesc = null;
-          let currentGroup = null;
+          // Fill-down variables
+          let curAsm = null;
+          let curAsmDesc = null;
 
-          for (let r = headerIndex + 1; r < rows.length; r++) {
-            const row = rows[r] || [];
-            
-            // Assembly context fill-down (basic)
-            if (idxAsm !== -1) {
-                const asmVal = row[idxAsm];
-                if (asmVal) {
-                  currentAssembly = String(asmVal).trim();
-                  if(idxDesc !== -1) {
-                      const descVal = row[idxDesc];
-                      currentAsmDesc = descVal ? String(descVal).trim() : null;
-                  }
-                  if(idxGroup !== -1) {
-                     const gVal = row[idxGroup];
-                     if (gVal) currentGroup = gVal;
-                  }
-                }
+          for(let r=headerIdx+1; r<rows.length; r++) {
+            const row = rows[r];
+            if (!row) continue;
+
+            // Handle Assembly Context (Fill Down)
+            const asmVal = getVal(row, 'ASSEMBLY NO');
+            if (asmVal) {
+              curAsm = asmVal;
+              const desc = getVal(row, 'Description'); 
+              // Only update assembly desc if we are on the assembly header line
+              if (colMap['ASSEMBLY NO'] !== undefined) curAsmDesc = desc; 
             }
 
-            const partVal = idxPart !== -1 ? row[idxPart] : null;
-            const catVal = idxCat !== -1 ? row[idxCat] : null;
-            const descVal = idxDesc !== -1 ? row[idxDesc] : null;
-            const itemVal = idxItem !== -1 ? row[idxItem] : null;
-            const secVal = idxSec !== -1 ? row[idxSec] : null;
-            const locVal = idxLoc !== -1 ? row[idxLoc] : null;
+            const part = getVal(row, 'Part #');
+            if (part) {
+              const node = {
+                sheet: sheetName,
+                assemblyNo: curAsm,
+                assemblyDesc: curAsmDesc, // Note: this might be loose, but acceptable
+                part: part,
+                category: getVal(row, 'Category'),
+                desc: getVal(row, 'Description'),
+                item: getVal(row, 'Item'),
+                loc: getVal(row, 'Part Location/Process'),
+                sec: getVal(row, 'Secondary process'),
+                qty: getVal(row, 'Qty')
+              };
 
-            // Only store if we have a part number
-            if (partVal) {
-                const node = {
-                  sourceSheet: sheetName, // Track where it came from
-                  assemblyNo: currentAssembly,
-                  assemblyDescription: currentAsmDesc,
-                  group: currentGroup,
-                  part: String(partVal).trim(),
-                  category: catVal ? String(catVal).trim() : null,
-                  description: descVal ? String(descVal).trim() : null,
-                  item: (itemVal) ? String(itemVal).trim() : null,
-                  secondaryProcess: secVal ? String(secVal).trim() : null,
-                  location: locVal ? String(locVal).trim() : null
-                };
+              nodes.push(node);
+              count++;
 
-                nodes.push(node);
-                totalParsedRows++;
+              // Indexing
+              const k = part.toUpperCase();
+              if (!rowsByPart[k]) rowsByPart[k] = [];
+              rowsByPart[k].push(node);
 
-                // Indexing
-                const key = node.part.toUpperCase();
-                if (!rowsByPart[key]) rowsByPart[key] = [];
-                rowsByPart[key].push(node);
-
-                if (node.item && node.assemblyNo) {
-                  const treeKey = node.assemblyNo + "|" + node.item;
-                  nodeIndex[treeKey] = node;
-                }
+              if (node.assemblyNo && node.item) {
+                nodeIndex[`${node.assemblyNo}|${node.item}`] = node;
+              }
             }
           }
-          sheetsParsedCount++;
+        });
+
+        statusLoad.innerHTML = `Success! Parsed <strong>${count}</strong> parts from ${activeChips.length} sheets.`;
+        partInput.disabled = false;
+        searchBtn.disabled = false;
+        partInput.focus();
+      }, 50); // Small timeout to allow UI to update text
+    });
+
+    // === 3. SEARCH & TRACE LOGIC ===
+    
+    // Global function for clicking links
+    window.jumpToPart = function(p) {
+      partInput.value = p;
+      performSearch();
+    };
+
+    searchBtn.addEventListener('click', performSearch);
+    partInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') performSearch(); });
+
+    function performSearch() {
+      const raw = partInput.value.trim();
+      if (!raw) return;
+      const key = raw.toUpperCase();
+      
+      resultsContainer.innerHTML = '';
+
+      if (!rowsByPart[key]) {
+        resultsContainer.innerHTML = `
+          <div class="glass-panel" style="text-align:center; color:#fbbf24;">
+            No results found for <strong>${raw}</strong>.
+          </div>`;
+        return;
+      }
+
+      const matches = rowsByPart[key];
+      matches.forEach((node, index) => {
+        const chain = buildChain(node);
+        renderChain(chain, index + 1);
+      });
+    }
+
+    function buildChain(node) {
+      // 1. Find Parents (Up the tree)
+      const parents = [];
+      let current = node;
+      
+      // Basic loop protection
+      let safety = 0;
+      while (current && current.item && current.assemblyNo && safety < 20) {
+        // Logic: if item is 1.2.3, parent is 1.2
+        const parts = current.item.split('.');
+        if (parts.length <= 1) break; // Top level
+        parts.pop();
+        const parentItem = parts.join('.');
+        
+        const parentNode = nodeIndex[`${current.assemblyNo}|${parentItem}`];
+        if (parentNode) {
+          parents.push(parentNode);
+          current = parentNode;
+        } else {
+          break;
+        }
+        safety++;
+      }
+
+      // 2. Find Inputs (Down the tree - Raw Materials)
+      // We look for other nodes in the SAME assembly whose Item starts with our Item
+      // e.g. If we are 1.2, inputs are 1.2.1, 1.2.2 (immediate children)
+      const inputs = [];
+      if (node.assemblyNo && node.item) {
+        const prefix = node.item + '.';
+        // We scan the flat list (optimization: could index by assembly to speed this up)
+        // Since dataset is likely <10k rows, linear scan of filtered set is okay-ish, 
+        // but let's try to be smarter. We can iterate specific assembly bucket if we had one.
+        // For now, linear scan is robust enough for typical MBOM sizes.
+        
+        // Filter: Must be same assembly, Item must start with prefix, 
+        // AND should not have *another* dot (direct child only)
+        const depth = node.item.split('.').length + 1;
+        
+        nodes.forEach(n => {
+          if (n.assemblyNo === node.assemblyNo && n.item && n.item.startsWith(prefix)) {
+             const nDepth = n.item.split('.').length;
+             // Only include immediate children (inputs)
+             if (nDepth === depth) {
+               // Optional: Filter for "Material" categories only? 
+               // Nima usually wants everything that goes INTO it.
+               inputs.push(n);
+             }
+          }
+        });
+      }
+
+      return { node, parents, inputs };
+    }
+
+    // === 4. RENDERING (METRO MAP) ===
+    function renderChain(data, idx) {
+      const { node, parents, inputs } = data;
+
+      const card = document.createElement('div');
+      card.className = 'route-card';
+
+      // Header
+      card.innerHTML = `
+        <div class="route-header">
+          <span>Occurrence #${idx}</span>
+          <span>${node.sheet}</span>
+        </div>
+      `;
+
+      const flow = document.createElement('div');
+      flow.className = 'flow-container';
+
+      // A. PARENTS (Downstream - Where this goes)
+      // Reverse parents so Highest Assembly is at the top
+      [...parents].reverse().forEach(p => {
+        flow.appendChild(createStep('is-parent', 'Used In (Parent)', p, true));
       });
 
-      sheetStatus.innerHTML = `<strong>Success!</strong> Parsed ${totalParsedRows} rows from ${sheetsParsedCount} sheets. Ready to search.`;
-      partInput.disabled = false;
-      searchBtn.disabled = false;
-    });
+      // B. CURRENT PART (Focus)
+      flow.appendChild(createStep('is-focus', 'Current Part', node, false));
 
-    // ===== Search handler =====
-    searchBtn.addEventListener("click", () => {
-      const raw = partInput.value || "";
-      const key = raw.trim().toUpperCase();
-      clearResults();
-
-      if (!key) {
-        renderNoResult("Please enter a part number first.");
-        return;
-      }
-      if (!rowsByPart[key] || !rowsByPart[key].length) {
-        renderNoResult(`No rows found for part “${raw.trim()}”. (Checked ${nodes.length} rows)`);
-        return;
+      // C. INPUTS (Upstream - What goes into this)
+      if (inputs.length > 0) {
+        inputs.forEach(inp => {
+          flow.appendChild(createStep('is-child', 'Input (Material/Child)', inp, true));
+        });
+      } else {
+        // No inputs
+        const empty = document.createElement('div');
+        empty.className = 'flow-step is-child';
+        empty.innerHTML = `<div class="step-label">No sub-components found</div>`;
+        flow.appendChild(empty);
       }
 
-      const nodesForPart = rowsByPart[key];
-      const chains = nodesForPart.map(buildChain);
-      renderChains(key, chains);
-    });
+      card.appendChild(flow);
+      resultsContainer.appendChild(card);
+    }
 
-    // Allow pressing Enter in the input to trigger search
-    partInput.addEventListener("keydown", e => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        if (!searchBtn.disabled) searchBtn.click();
-      }
-    });
+    function createStep(typeClass, label, data, isClickable) {
+      const el = document.createElement('div');
+      el.className = `flow-step ${typeClass}`;
+      
+      const nameClass = isClickable ? 'part-name clickable-part' : 'part-name';
+      const clickAttr = isClickable ? `onclick="jumpToPart('${data.part}')"` : '';
+
+      el.innerHTML = `
+        <div class="step-label">${label}</div>
+        <div class="step-card ${typeClass === 'is-focus' ? 'focus-card' : ''}">
+          <div class="${nameClass}" ${clickAttr}>${data.part}</div>
+          <div class="part-desc">${data.desc || 'No description'}</div>
+          <div class="part-meta">
+             <span class="meta-tag">📂 ${friendlyCat(data.category)}</span>
+             ${data.loc ? `<span class="meta-tag">📍 ${data.loc}</span>` : ''}
+             ${data.sec ? `<span class="meta-tag">⚙️ ${data.sec}</span>` : ''}
+             ${data.qty ? `<span class="meta-tag">Qty: ${data.qty}</span>` : ''}
+          </div>
+        </div>
+      `;
+      return el;
+    }
+
+    function friendlyCat(cat) {
+      if (!cat) return 'Unspecified';
+      const map = {
+        'RAW': 'Raw Material', 'LASER': 'Laser Cut', 'WELD': 'Weldment',
+        'MACH': 'Machined', 'ASSM': 'Assembly', 'PURCH': 'Purchased',
+        'FASTN': 'Fastener', 'ELEC': 'Electrical'
+      };
+      return map[cat.toUpperCase()] || cat;
+    }
+
   </script>
 </body>
 </html>
