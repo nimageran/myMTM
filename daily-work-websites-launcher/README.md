@@ -2,6 +2,11 @@
 
 A simple PowerShell script to automatically open multiple work websites in separate browser windows with one click.
 
+## Related projects
+
+- [Fastener Explorer](../fastener-gallery/README.md) – interactive web UI and
+  FreeCAD helper script for browsing manufacturing fasteners.
+
 ## What it does
 - Opens three specific websites in separate Microsoft Edge windows
 - Adds a 1-second delay between each launch to prevent resource conflicts

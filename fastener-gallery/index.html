@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fastener Explorer</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="app">
+      <header class="app__header">
+        <h1>Fastener Explorer</h1>
+        <p>
+          Explore common manufacturing fasteners, learn when to use them, and
+          preview simple reference models generated from Python scripts.
+        </p>
+      </header>
+
+      <main class="app__main">
+        <section class="panel panel--controls">
+          <h2>Fastener selection</h2>
+          <label class="field" for="fastener-select">
+            <span class="field__label">Choose a fastener</span>
+            <select id="fastener-select" class="field__input"></select>
+          </label>
+          <div class="details" id="fastener-details"></div>
+        </section>
+
+        <section class="panel panel--preview">
+          <div class="preview__image">
+            <img id="fastener-image" src="" alt="Fastener preview" />
+          </div>
+          <div class="preview__meta" id="fastener-meta"></div>
+        </section>
+      </main>
+
+      <footer class="app__footer">
+        <p>
+          Want to generate your own previews? Run the provided FreeCAD Python
+          script to export updated models, then refresh the page to see them in
+          action.
+        </p>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
