@@ -10,15 +10,16 @@
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js'></script>
     
     <style>
-        /* --- THEME DEFINITIONS --- */
+        /* --- 1. THEME DEFINITIONS --- */
         :root {
-            /* 1. Corporate (Light) - DEFAULT */
+            /* Corporate (Light) - DEFAULT */
             --bg-body: #f3f4f6;
             --bg-card: #ffffff;
             --text-main: #1f2937;
             --text-muted: #6b7280;
             --primary: #2563eb; /* Royal Blue */
             --primary-text: #ffffff;
+            --success: #10b981; /* Green */
             --border: #e5e7eb;
             --output-bg: #f9fafb;
             --output-text: #374151;
@@ -28,13 +29,14 @@
         }
 
         [data-theme="cyberpunk"] {
-            /* 2. Cyberpunk (Dark) */
+            /* Cyberpunk (Dark) */
             --bg-body: #0f172a;
             --bg-card: rgba(30, 41, 59, 0.7);
             --text-main: #e2e8f0;
             --text-muted: #94a3b8;
             --primary: #00f3ff; /* Neon Cyan */
             --primary-text: #000000;
+            --success: #00ff9d;
             --border: rgba(255, 255, 255, 0.1);
             --output-bg: #000000;
             --output-text: #00f3ff;
@@ -44,13 +46,14 @@
         }
 
         [data-theme="terminal"] {
-            /* 3. Terminal (Hacker) */
+            /* Terminal (Hacker) */
             --bg-body: #000000;
             --bg-card: #111111;
             --text-main: #33ff00; /* Matrix Green */
             --text-muted: #008f11;
             --primary: #33ff00;
             --primary-text: #000000;
+            --success: #33ff00;
             --border: #33ff00;
             --output-bg: #0d0d0d;
             --output-text: #33ff00;
@@ -59,7 +62,7 @@
             --shadow: none;
         }
 
-        /* --- LAYOUT & TYPOGRAPHY --- */
+        /* --- 2. LAYOUT & TYPOGRAPHY --- */
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background: var(--bg-body);
@@ -70,12 +73,12 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
-            transition: background 0.3s, color 0.3s;
+            transition: all 0.3s ease;
         }
 
         .container {
             background: var(--bg-card);
-            backdrop-filter: blur(10px); /* For glass effect in dark mode */
+            backdrop-filter: blur(10px);
             border: 1px solid var(--border);
             border-radius: 12px;
             box-shadow: var(--shadow);
@@ -85,7 +88,7 @@
             position: relative;
         }
 
-        /* Theme Switcher Top Right */
+        /* Theme Switcher */
         .theme-switch {
             position: absolute;
             top: 20px;
@@ -98,6 +101,7 @@
             background: var(--bg-body);
             color: var(--text-main);
             cursor: pointer;
+            font-size: 0.85rem;
         }
 
         h1 { margin-top: 0; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
@@ -116,31 +120,13 @@
         }
         .privacy-icon { font-size: 1.5rem; margin-right: 15px; }
 
-        /* Controls */
+        /* Controls Area */
         .controls { display: flex; gap: 15px; align-items: center; margin-top: 30px; flex-wrap: wrap; }
         
         input[type="file"] { display: none; }
 
-        .custom-file-upload {
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 500;
-            display: inline-block;
-        }
-        
-        /* Specific override for Light theme button text to be readable */
-        [data-theme="light"] .custom-file-upload { color: var(--primary); }
-        [data-theme="terminal"] .custom-file-upload { background: #000; color: #33ff00; }
-
-        .custom-file-upload:hover { opacity: 0.8; }
-
-        button#convertBtn {
-            background: var(--primary);
-            color: var(--primary-text);
+        /* Buttons */
+        .btn {
             border: none;
             padding: 12px 25px;
             border-radius: 5px;
@@ -148,10 +134,28 @@
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 1px;
-            transition: transform 0.2s;
+            transition: transform 0.2s, opacity 0.2s;
+            display: inline-block;
         }
-        button#convertBtn:hover { transform: scale(1.02); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn:hover { transform: scale(1.02); opacity: 0.9; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-upload {
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            background: transparent;
+        }
+        [data-theme="terminal"] .btn-upload { background: #000; color: #33ff00; }
+
+        .btn-primary {
+            background: var(--primary);
+            color: var(--primary-text);
+        }
+
+        .btn-download {
+            background: var(--success);
+            color: var(--primary-text); /* Usually black or white depending on theme */
+        }
 
         /* Output Area */
         .output-label { margin-top: 30px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -177,11 +181,10 @@
 
     <div class="container">
         <div class="theme-switch">
-            <label for="themeSelect" style="font-size: 0.8rem; margin-right: 5px;">Theme:</label>
             <select id="themeSelect">
-                <option value="light">Corporate (Light)</option>
-                <option value="cyberpunk">Cyberpunk (Dark)</option>
-                <option value="terminal">Terminal (Hacker)</option>
+                <option value="light">Theme: Corporate</option>
+                <option value="cyberpunk">Theme: Cyberpunk</option>
+                <option value="terminal">Theme: Terminal</option>
             </select>
         </div>
 
@@ -196,11 +199,13 @@
         </div>
 
         <div class="controls">
-            <label for="fileInput" class="custom-file-upload">📂 Select PDF</label>
+            <label for="fileInput" class="btn btn-upload">📂 Select PDF</label>
             <input type="file" id="fileInput" accept="application/pdf" />
             
-            <button id="convertBtn" style="display:none;">Start OCR</button>
-            <span id="fileNameDisplay" style="margin-left: 10px; font-weight:bold;"></span>
+            <button id="convertBtn" class="btn btn-primary" style="display:none;">Start OCR</button>
+            <button id="downloadBtn" class="btn btn-download" style="display:none;">💾 Download Text</button>
+            
+            <span id="fileNameDisplay" style="margin-left: 10px; font-weight:bold; font-size: 0.9rem;"></span>
         </div>
         
         <div id="status">System Ready.</div>
@@ -210,7 +215,7 @@
     </div>
 
     <script>
-        // --- THEME SWITCHER LOGIC ---
+        // --- 1. THEME SWITCHER LOGIC ---
         const themeSelect = document.getElementById('themeSelect');
         const htmlTag = document.documentElement;
 
@@ -218,57 +223,99 @@
             htmlTag.setAttribute('data-theme', e.target.value);
         });
 
-        // --- OCR LOGIC (Unchanged) ---
+        // --- 2. OCR VARIABLES ---
         const fileInput = document.getElementById('fileInput');
         const convertBtn = document.getElementById('convertBtn');
+        const downloadBtn = document.getElementById('downloadBtn'); // New Button
         const statusDiv = document.getElementById('status');
         const outputDiv = document.getElementById('output');
         const nameDisplay = document.getElementById('fileNameDisplay');
         let selectedFile = null;
 
+        // Set PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
+        // --- 3. EVENT: FILE SELECTED ---
         fileInput.addEventListener('change', (e) => {
             if(e.target.files[0]) {
                 selectedFile = e.target.files[0];
+                
+                // Reset UI
                 convertBtn.style.display = 'inline-block';
+                downloadBtn.style.display = 'none'; 
+                convertBtn.disabled = false;
+                convertBtn.innerText = "Start OCR";
+                
                 nameDisplay.innerText = selectedFile.name;
-                statusDiv.innerText = "File loaded.";
+                statusDiv.innerText = "File loaded. Ready to scan.";
                 outputDiv.innerText = ""; 
             }
         });
 
+        // --- 4. EVENT: START OCR ---
         convertBtn.addEventListener('click', async () => {
             if (!selectedFile) return;
+            
+            // Lock Interface
             convertBtn.disabled = true;
             convertBtn.innerText = "Processing...";
+            downloadBtn.style.display = 'none';
             
             try {
                 const arrayBuffer = await selectedFile.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
                 statusDiv.innerText = `Analyzing ${pdf.numPages} pages...`;
 
+                // Loop through pages
                 for (let i = 1; i <= pdf.numPages; i++) {
                     statusDiv.innerText = `Reading page ${i} / ${pdf.numPages}...`;
+                    
                     const page = await pdf.getPage(i);
                     const viewport = page.getViewport({ scale: 1.5 });
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
+                    
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    
                     const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+                    
                     outputDiv.innerText += `--- Page ${i} ---\n${text}\n\n`;
+                    
+                    // Auto-scroll to bottom
                     outputDiv.scrollTop = outputDiv.scrollHeight;
                 }
+
+                // Finish
                 statusDiv.innerText = "Complete.";
-                convertBtn.innerText = "Start OCR";
+                convertBtn.innerText = "Scan Complete";
+                
+                // Show Download Button
+                downloadBtn.style.display = 'inline-block';
+
             } catch (err) {
                 console.error(err);
                 statusDiv.innerText = "Error: " + err.message;
                 convertBtn.disabled = false;
+                convertBtn.innerText = "Retry";
             }
-            convertBtn.disabled = false;
+        });
+
+        // --- 5. EVENT: DOWNLOAD TEXT ---
+        downloadBtn.addEventListener('click', () => {
+            const textContent = outputDiv.innerText;
+            const blob = new Blob([textContent], { type: "text/plain" });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement("a");
+            a.href = url;
+            // Name file: "MyFile_OCR.txt"
+            a.download = selectedFile.name.replace(".pdf", "") + "_OCR.txt";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         });
     </script>
 </body>
