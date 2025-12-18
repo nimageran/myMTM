@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Private Local OCR</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
+    <script src='https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js'></script>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
+        #output { white-space: pre-wrap; background: #f4f4f4; padding: 1rem; margin-top: 1rem; border: 1px solid #ddd; }
+        button { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; }
+        button:disabled { background: #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Private PDF OCR</h1>
+    <p>Select a PDF. Processing happens 100% in your browser. No files are uploaded.</p>
+    
+    <input type="file" id="fileInput" accept="application/pdf" />
+    <button id="convertBtn" style="display:none;">Run OCR</button>
+    
+    <div id="status"></div>
+    <div id="output"></div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const convertBtn = document.getElementById('convertBtn');
+        const statusDiv = document.getElementById('status');
+        const outputDiv = document.getElementById('output');
+        let selectedFile = null;
+
+        // 1. Setup PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files[0]) {
+                selectedFile = e.target.files[0];
+                convertBtn.style.display = 'inline-block';
+                statusDiv.innerText = "File selected: " + selectedFile.name;
+            }
+        });
+
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            convertBtn.disabled = true;
+            outputDiv.innerText = "";
+            
+            try {
+                // 2. Read the PDF file
+                const arrayBuffer = await selectedFile.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+                statusDiv.innerText = `Found ${pdf.numPages} pages. Starting OCR...`;
+
+                // 3. Loop through every page
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    statusDiv.innerText = `Processing page ${i} of ${pdf.numPages}...`;
+                    
+                    // Render page to a virtual canvas (Image)
+                    const page = await pdf.getPage(i);
+                    const viewport = page.getViewport({ scale: 1.5 }); // 1.5 scale for better OCR accuracy
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+                    // Run Tesseract OCR on that canvas
+                    const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
+                    
+                    // Append text to output
+                    outputDiv.innerText += `--- Page ${i} ---\n${text}\n\n`;
+                }
+
+                statusDiv.innerText = "Done!";
+            } catch (err) {
+                console.error(err);
+                statusDiv.innerText = "Error: " + err.message;
+            }
+            convertBtn.disabled = false;
+        });
+    </script>
+</body>
+</html>
