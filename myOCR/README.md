@@ -1,6 +1,6 @@
 # Secure Client-Side OCR Tool
 
-### [Launch Live Tool](https://your-username.github.io/your-repo-name)
+### [Launch Live Tool](https://nimageran.github.io/my-production-engineering-toolbox/myOCR)
 *(Click the link above to open the application)*
 
 ---
@@ -10,7 +10,7 @@
 
 * **Zero Uploads:** When you select a PDF, it is **NOT** uploaded to the internet.
 * **Local Processing:** All "reading" (OCR) happens inside your web browser's memory on your own computer.
-* **Safe for Data:** You can safely use this with internal company documents, invoices, or private files. The data never leaves your device.
+* **Safe for Data:** You can safely use this with any documents. The data never leaves your device.
 
 ---
 
@@ -19,7 +19,7 @@
 1.  **Select Theme:** Use the dropdown in the top-right corner to choose your view (Light, Cyberpunk, or Terminal).
 2.  **Load File:** Click **"Select PDF"** and pick a file from your computer.
 3.  **Run OCR:** Click **"Start OCR"**. The browser will scan each page one by one.
-4.  **Copy Text:** Once finished, the text will appear in the output window. You can copy/paste it into Excel or Word.
+
 
 ---
 
