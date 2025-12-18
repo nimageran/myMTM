@@ -226,13 +226,12 @@
         // --- 2. OCR VARIABLES ---
         const fileInput = document.getElementById('fileInput');
         const convertBtn = document.getElementById('convertBtn');
-        const downloadBtn = document.getElementById('downloadBtn'); // New Button
+        const downloadBtn = document.getElementById('downloadBtn');
         const statusDiv = document.getElementById('status');
         const outputDiv = document.getElementById('output');
         const nameDisplay = document.getElementById('fileNameDisplay');
         let selectedFile = null;
 
-        // Set PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         // --- 3. EVENT: FILE SELECTED ---
@@ -247,7 +246,7 @@
                 convertBtn.innerText = "Start OCR";
                 
                 nameDisplay.innerText = selectedFile.name;
-                statusDiv.innerText = "File loaded. Ready to scan.";
+                statusDiv.innerText = "File loaded. High-Res Mode Ready.";
                 outputDiv.innerText = ""; 
             }
         });
@@ -258,7 +257,7 @@
             
             // Lock Interface
             convertBtn.disabled = true;
-            convertBtn.innerText = "Processing...";
+            convertBtn.innerText = "Processing (High-Res)...";
             downloadBtn.style.display = 'none';
             
             try {
@@ -268,10 +267,13 @@
 
                 // Loop through pages
                 for (let i = 1; i <= pdf.numPages; i++) {
-                    statusDiv.innerText = `Reading page ${i} / ${pdf.numPages}...`;
+                    statusDiv.innerText = `Scanning page ${i} / ${pdf.numPages}...`;
                     
                     const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.5 });
+                    
+                    // --- HIGH-RES FIX (Scale 2.2) ---
+                    const viewport = page.getViewport({ scale: 2.2 });
+                    
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     canvas.height = viewport.height;
