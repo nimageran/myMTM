@@ -1,3 +1,0 @@
-streamlit
-ocrmypdf
-cffi
