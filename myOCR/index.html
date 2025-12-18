@@ -1,82 +1,272 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <title>Private Local OCR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure OCR | Client-Side</title>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js'></script>
+    
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-        #output { white-space: pre-wrap; background: #f4f4f4; padding: 1rem; margin-top: 1rem; border: 1px solid #ddd; }
-        button { cursor: pointer; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; }
-        button:disabled { background: #ccc; }
+        /* --- THEME DEFINITIONS --- */
+        :root {
+            /* 1. Corporate (Light) - DEFAULT */
+            --bg-body: #f3f4f6;
+            --bg-card: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --primary: #2563eb; /* Royal Blue */
+            --primary-text: #ffffff;
+            --border: #e5e7eb;
+            --output-bg: #f9fafb;
+            --output-text: #374151;
+            --badge-bg: #ecfdf5;
+            --badge-border: #10b981;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="cyberpunk"] {
+            /* 2. Cyberpunk (Dark) */
+            --bg-body: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --primary: #00f3ff; /* Neon Cyan */
+            --primary-text: #000000;
+            --border: rgba(255, 255, 255, 0.1);
+            --output-bg: #000000;
+            --output-text: #00f3ff;
+            --badge-bg: rgba(0, 255, 157, 0.05);
+            --badge-border: #00ff9d;
+            --shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        [data-theme="terminal"] {
+            /* 3. Terminal (Hacker) */
+            --bg-body: #000000;
+            --bg-card: #111111;
+            --text-main: #33ff00; /* Matrix Green */
+            --text-muted: #008f11;
+            --primary: #33ff00;
+            --primary-text: #000000;
+            --border: #33ff00;
+            --output-bg: #0d0d0d;
+            --output-text: #33ff00;
+            --badge-bg: #000000;
+            --badge-border: #33ff00;
+            --shadow: none;
+        }
+
+        /* --- LAYOUT & TYPOGRAPHY --- */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .container {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px); /* For glass effect in dark mode */
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 800px;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* Theme Switcher Top Right */
+        .theme-switch {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        select {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: var(--bg-body);
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        h1 { margin-top: 0; font-weight: 700; border-bottom: 1px solid var(--border); padding-bottom: 15px; }
+        h1 span { color: var(--primary); }
+
+        /* Privacy Badge */
+        .privacy-badge {
+            background: var(--badge-bg);
+            border-left: 4px solid var(--badge-border);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+            display: flex;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+        .privacy-icon { font-size: 1.5rem; margin-right: 15px; }
+
+        /* Controls */
+        .controls { display: flex; gap: 15px; align-items: center; margin-top: 30px; flex-wrap: wrap; }
+        
+        input[type="file"] { display: none; }
+
+        .custom-file-upload {
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            display: inline-block;
+        }
+        
+        /* Specific override for Light theme button text to be readable */
+        [data-theme="light"] .custom-file-upload { color: var(--primary); }
+        [data-theme="terminal"] .custom-file-upload { background: #000; color: #33ff00; }
+
+        .custom-file-upload:hover { opacity: 0.8; }
+
+        button#convertBtn {
+            background: var(--primary);
+            color: var(--primary-text);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: transform 0.2s;
+        }
+        button#convertBtn:hover { transform: scale(1.02); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Output Area */
+        .output-label { margin-top: 30px; font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        
+        #output {
+            background: var(--output-bg);
+            color: var(--output-text);
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            min-height: 200px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+
+        #status { margin-top: 10px; color: var(--text-muted); font-style: italic; font-size: 0.9rem; }
     </style>
 </head>
 <body>
-    <h1>Private PDF OCR</h1>
-    <p>Select a PDF. Processing happens 100% in your browser. No files are uploaded.</p>
-    
-    <input type="file" id="fileInput" accept="application/pdf" />
-    <button id="convertBtn" style="display:none;">Run OCR</button>
-    
-    <div id="status"></div>
-    <div id="output"></div>
+
+    <div class="container">
+        <div class="theme-switch">
+            <label for="themeSelect" style="font-size: 0.8rem; margin-right: 5px;">Theme:</label>
+            <select id="themeSelect">
+                <option value="light">Corporate (Light)</option>
+                <option value="cyberpunk">Cyberpunk (Dark)</option>
+                <option value="terminal">Terminal (Hacker)</option>
+            </select>
+        </div>
+
+        <h1>Secure<span>OCR</span></h1>
+
+        <div class="privacy-badge">
+            <div class="privacy-icon">🔒</div>
+            <div>
+                <strong>PRIVATE & SECURE</strong><br>
+                Processing happens 100% inside your browser. No files are uploaded to any server.
+            </div>
+        </div>
+
+        <div class="controls">
+            <label for="fileInput" class="custom-file-upload">📂 Select PDF</label>
+            <input type="file" id="fileInput" accept="application/pdf" />
+            
+            <button id="convertBtn" style="display:none;">Start OCR</button>
+            <span id="fileNameDisplay" style="margin-left: 10px; font-weight:bold;"></span>
+        </div>
+        
+        <div id="status">System Ready.</div>
+        
+        <div class="output-label">Extracted Text Result</div>
+        <div id="output">// Text will appear here...</div>
+    </div>
 
     <script>
+        // --- THEME SWITCHER LOGIC ---
+        const themeSelect = document.getElementById('themeSelect');
+        const htmlTag = document.documentElement;
+
+        themeSelect.addEventListener('change', (e) => {
+            htmlTag.setAttribute('data-theme', e.target.value);
+        });
+
+        // --- OCR LOGIC (Unchanged) ---
         const fileInput = document.getElementById('fileInput');
         const convertBtn = document.getElementById('convertBtn');
         const statusDiv = document.getElementById('status');
         const outputDiv = document.getElementById('output');
+        const nameDisplay = document.getElementById('fileNameDisplay');
         let selectedFile = null;
 
-        // 1. Setup PDF.js worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         fileInput.addEventListener('change', (e) => {
             if(e.target.files[0]) {
                 selectedFile = e.target.files[0];
                 convertBtn.style.display = 'inline-block';
-                statusDiv.innerText = "File selected: " + selectedFile.name;
+                nameDisplay.innerText = selectedFile.name;
+                statusDiv.innerText = "File loaded.";
+                outputDiv.innerText = ""; 
             }
         });
 
         convertBtn.addEventListener('click', async () => {
             if (!selectedFile) return;
             convertBtn.disabled = true;
-            outputDiv.innerText = "";
+            convertBtn.innerText = "Processing...";
             
             try {
-                // 2. Read the PDF file
                 const arrayBuffer = await selectedFile.arrayBuffer();
                 const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-                statusDiv.innerText = `Found ${pdf.numPages} pages. Starting OCR...`;
+                statusDiv.innerText = `Analyzing ${pdf.numPages} pages...`;
 
-                // 3. Loop through every page
                 for (let i = 1; i <= pdf.numPages; i++) {
-                    statusDiv.innerText = `Processing page ${i} of ${pdf.numPages}...`;
-                    
-                    // Render page to a virtual canvas (Image)
+                    statusDiv.innerText = `Reading page ${i} / ${pdf.numPages}...`;
                     const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.5 }); // 1.5 scale for better OCR accuracy
+                    const viewport = page.getViewport({ scale: 1.5 });
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
-                    
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-                    // Run Tesseract OCR on that canvas
                     const { data: { text } } = await Tesseract.recognize(canvas, 'eng');
-                    
-                    // Append text to output
                     outputDiv.innerText += `--- Page ${i} ---\n${text}\n\n`;
+                    outputDiv.scrollTop = outputDiv.scrollHeight;
                 }
-
-                statusDiv.innerText = "Done!";
+                statusDiv.innerText = "Complete.";
+                convertBtn.innerText = "Start OCR";
             } catch (err) {
                 console.error(err);
                 statusDiv.innerText = "Error: " + err.message;
+                convertBtn.disabled = false;
             }
             convertBtn.disabled = false;
         });
